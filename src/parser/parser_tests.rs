@@ -55,4 +55,34 @@ mod tests {
         }
         panic!("parser errors encountered");
     }
+
+    #[test]
+    fn test_return_statements() {
+        let input = "
+                    return 5;
+                    return 10;
+                    return 15;
+        ";
+
+        let lexer = Lexer::new(input);
+        let mut parser = Parser::new(lexer);
+
+        let program = parser.parse_program();
+        check_parser_errors(&parser);
+
+        assert_eq!(program.statements.len(), 3);
+
+        for i in 0..program.statements.len() {
+            let stmt = &program.statements[i];
+            test_return_statement(stmt);
+        }
+    }
+    fn test_return_statement(stmt: &Statement) {
+        match stmt {
+            Statement::Return(return_stmt) => {
+                assert_eq!(return_stmt.token.kind, TokenType::Return);
+            }
+            _ => panic!("stmt is not a ReturnStatement. Got={:?}", stmt),
+        }
+    }
 }
