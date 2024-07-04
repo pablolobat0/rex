@@ -157,31 +157,9 @@ impl<'a> Lexer<'a> {
             }
             Some(c) => {
                 if c.is_alphabetic() || c == '_' {
-                    let start_position = self.position;
-                    while let Some(c) = self.current_char {
-                        if c.is_alphanumeric() || c == '_' {
-                            self.read_char();
-                        } else {
-                            break;
-                        }
-                    }
-                    let lexeme: String = self.input[start_position..self.position].to_string();
-                    let kind = match self.keywords.get(lexeme.as_str()) {
-                        Some(&token_type) => token_type,
-                        None => TokenType::Identifier,
-                    };
-                    Token::new(kind, lexeme, self.line)
+                    self.read_identifier_or_keyword()
                 } else if c.is_digit(10) {
-                    let start_position = self.position;
-                    while let Some(c) = self.current_char {
-                        if c.is_digit(10) {
-                            self.read_char();
-                        } else {
-                            break;
-                        }
-                    }
-                    let lexeme: String = self.input[start_position..self.position].to_string();
-                    Token::new(TokenType::Integer, lexeme, self.line)
+                    self.read_number()
                 } else {
                     self.read_char();
                     Token::new(TokenType::Illegal, c.to_string(), self.line)
@@ -191,5 +169,35 @@ impl<'a> Lexer<'a> {
         };
 
         token
+    }
+
+    fn read_identifier_or_keyword(&mut self) -> Token {
+        let start_position = self.position;
+        while let Some(c) = self.current_char {
+            if c.is_alphanumeric() || c == '_' {
+                self.read_char();
+            } else {
+                break;
+            }
+        }
+        let lexeme: String = self.input[start_position..self.position].to_string();
+        let kind = match self.keywords.get(lexeme.as_str()) {
+            Some(&token_type) => token_type,
+            None => TokenType::Identifier,
+        };
+        Token::new(kind, lexeme, self.line)
+    }
+
+    fn read_number(&mut self) -> Token {
+        let start_position = self.position;
+        while let Some(c) = self.current_char {
+            if c.is_digit(10) {
+                self.read_char();
+            } else {
+                break;
+            }
+        }
+        let lexeme: String = self.input[start_position..self.position].to_string();
+        Token::new(TokenType::Integer, lexeme, self.line)
     }
 }

@@ -4,6 +4,7 @@ pub trait Node {
     fn get_lexeme(&self) -> String;
 }
 
+// An expression computes a value
 #[derive(Debug)]
 pub enum Expression {
     Identifier(Identifier),
@@ -17,6 +18,7 @@ impl Node for Expression {
     }
 }
 
+// A statement expresses some action, but does not generate a value
 #[derive(Debug)]
 pub enum Statement {
     Let(LetStatement),
@@ -32,6 +34,7 @@ impl Node for Statement {
     }
 }
 
+// Root node of the AST
 #[derive(Debug)]
 pub struct Program {
     pub statements: Vec<Statement>,
@@ -56,13 +59,17 @@ impl Node for Program {
 #[derive(Debug)]
 pub struct LetStatement {
     pub token: Token,
-    pub name: Identifier,
+    pub identifier: Identifier,
     pub value: Expression,
 }
 
 impl LetStatement {
-    pub fn new(token: Token, name: Identifier, value: Expression) -> LetStatement {
-        LetStatement { token, name, value }
+    pub fn new(token: Token, identifier: Identifier, value: Expression) -> LetStatement {
+        LetStatement {
+            token,
+            identifier,
+            value,
+        }
     }
 }
 
@@ -70,7 +77,7 @@ impl Node for LetStatement {
     fn get_lexeme(&self) -> String {
         format!(
             "let {} = {}",
-            self.name.get_lexeme(),
+            self.identifier.get_lexeme(),
             self.value.get_lexeme()
         )
     }
@@ -79,12 +86,12 @@ impl Node for LetStatement {
 #[derive(Debug)]
 pub struct Identifier {
     pub token: Token,
-    pub value: String,
+    pub name: String,
 }
 
 impl Identifier {
-    pub fn new(token: Token, value: String) -> Identifier {
-        Identifier { token, value }
+    pub fn new(token: Token, name: String) -> Identifier {
+        Identifier { token, name }
     }
 }
 

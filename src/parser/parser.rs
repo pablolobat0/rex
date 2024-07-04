@@ -30,6 +30,14 @@ impl<'a> Parser<'a> {
         self.errors.clone()
     }
 
+    fn peek_error(&mut self, expected_token: TokenType) {
+        let message = format!(
+            "Expected next token to be {}, got {} instead",
+            expected_token, self.peek_token.kind
+        );
+        self.errors.push(message);
+    }
+
     fn next_token(&mut self) {
         self.current_token = std::mem::replace(&mut self.peek_token, self.lexer.next_token());
     }
@@ -56,12 +64,13 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_let_statement(&mut self) -> Option<LetStatement> {
-        let token: Token = self.current_token.clone();
+        let let_token: Token = self.current_token.clone();
 
         if !self.expect_peek(TokenType::Identifier) {
             return None;
         };
-        let name = Identifier::new(
+
+        let identifier = Identifier::new(
             self.current_token.clone(),
             self.current_token.lexeme.clone(),
         );
@@ -76,7 +85,7 @@ impl<'a> Parser<'a> {
             self.next_token();
         }
 
-        Some(LetStatement::new(token, name, value))
+        Some(LetStatement::new(let_token, identifier, value))
     }
 
     fn parse_return_statement(&mut self) -> Option<ReturnStatement> {
@@ -110,13 +119,5 @@ impl<'a> Parser<'a> {
             self.current_token.clone(),
             self.current_token.lexeme.clone(),
         ))
-    }
-
-    fn peek_error(&mut self, expected_token: TokenType) {
-        let message = format!(
-            "Expected next token to be {}, got {} instead",
-            expected_token, self.peek_token.kind
-        );
-        self.errors.push(message);
     }
 }
