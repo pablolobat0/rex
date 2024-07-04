@@ -3,7 +3,7 @@ use crate::lexer::{
     token::token::{Token, TokenType},
 };
 
-use super::ast::ast::{Expression, Identifier, LetStatement, Program, Statement};
+use super::ast::ast::{Expression, Identifier, LetStatement, Program, ReturnStatement, Statement};
 
 #[derive(Debug)]
 pub struct Parser<'a> {
@@ -50,6 +50,7 @@ impl<'a> Parser<'a> {
     fn parse_statement(&mut self) -> Option<Statement> {
         match self.current_token.kind {
             TokenType::Let => self.parse_let_statement().map(Statement::Let),
+            TokenType::Return => self.parse_return_statement().map(Statement::Return),
             _ => None,
         }
     }
@@ -76,6 +77,17 @@ impl<'a> Parser<'a> {
         }
 
         Some(LetStatement::new(token, name, value))
+    }
+
+    fn parse_return_statement(&mut self) -> Option<ReturnStatement> {
+        let token: Token = self.current_token.clone();
+
+        let value = self.parse_expression();
+        while !self.current_token_is(TokenType::Semicolon) {
+            self.next_token();
+        }
+
+        Some(ReturnStatement::new(token, value))
     }
 
     fn expect_peek(&mut self, token: TokenType) -> bool {

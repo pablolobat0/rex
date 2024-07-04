@@ -20,12 +20,14 @@ impl Node for Expression {
 #[derive(Debug)]
 pub enum Statement {
     Let(LetStatement),
+    Return(ReturnStatement),
 }
 
 impl Node for Statement {
     fn get_lexeme(&self) -> String {
         match self {
             Statement::Let(statement) => statement.get_lexeme(),
+            Statement::Return(statement) => statement.get_lexeme(),
         }
     }
 }
@@ -89,5 +91,23 @@ impl Identifier {
 impl Node for Identifier {
     fn get_lexeme(&self) -> String {
         return self.token.lexeme.clone();
+    }
+}
+
+#[derive(Debug)]
+pub struct ReturnStatement {
+    pub token: Token,
+    pub value: Expression,
+}
+
+impl Node for ReturnStatement {
+    fn get_lexeme(&self) -> String {
+        format!("{} {}", self.token.kind, self.value.get_lexeme())
+    }
+}
+
+impl ReturnStatement {
+    pub fn new(token: Token, value: Expression) -> ReturnStatement {
+        ReturnStatement { token, value }
     }
 }
