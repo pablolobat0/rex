@@ -6,11 +6,11 @@ use crate::lexer::{
 use super::ast::ast::{Expression, Identifier, LetStatement, Program, Statement};
 
 #[derive(Debug)]
-struct Parser<'a> {
+pub struct Parser<'a> {
     lexer: Lexer<'a>,
     current_token: Token,
     peek_token: Token,
-    errors: Vec<String>,
+    pub errors: Vec<String>,
 }
 
 impl<'a> Parser<'a> {
@@ -34,7 +34,7 @@ impl<'a> Parser<'a> {
         self.current_token = std::mem::replace(&mut self.peek_token, self.lexer.next_token());
     }
 
-    fn parse_program(&mut self) -> Program {
+    pub fn parse_program(&mut self) -> Program {
         let mut program = Program::new();
 
         while self.current_token.kind != TokenType::EOF {
@@ -56,7 +56,6 @@ impl<'a> Parser<'a> {
 
     fn parse_let_statement(&mut self) -> Option<LetStatement> {
         let token: Token = self.current_token.clone();
-        self.next_token(); // Skip 'let'
 
         if !self.expect_peek(TokenType::Identifier) {
             return None;
