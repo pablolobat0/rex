@@ -2,8 +2,29 @@ use crate::lexer::{
     lexer::Lexer,
     token::token::{Token, TokenType},
 };
+use std::str::FromStr;
 
-use super::ast::ast::{Expression, Identifier, LetStatement, Program, ReturnStatement, Statement};
+use crate::parser::ast::ast::Identifier;
+
+use super::ast::ast::{
+    Expression, ExpressionStatement, IntegerLiteral, LetStatement, Program, ReturnStatement,
+    Statement,
+};
+use std::collections::HashMap;
+
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+enum Precedence {
+    Lowest,
+    Equals,      // ==
+    LessGreater, // > or <
+    Sum,         // +
+    Product,     // *
+    Prefix,      // -X or !X
+    Call,        // myFunction(X)
+}
+
+type PrefixParseFn = fn(&mut Parser<'_>) -> Option<Expression>;
+type InfixParseFn = fn(&mut Parser, Expression) -> Option<Expression>;
 
 #[derive(Debug)]
 pub struct Parser<'a> {
@@ -11,6 +32,8 @@ pub struct Parser<'a> {
     current_token: Token,
     peek_token: Token,
     pub errors: Vec<String>,
+    prefix_parse_fns: HashMap<TokenType, PrefixParseFn>,
+    infix_parse_fns: HashMap<TokenType, InfixParseFn>,
 }
 
 impl<'a> Parser<'a> {
@@ -18,12 +41,27 @@ impl<'a> Parser<'a> {
         let current_token = lexer.next_token();
         let peek_token = lexer.next_token();
 
-        Parser {
+        let mut parser = Parser {
             lexer,
             current_token,
             peek_token,
             errors: vec![],
-        }
+            prefix_parse_fns: HashMap::new(),
+            infix_parse_fns: HashMap::new(),
+        };
+
+        parser.register_prefix(TokenType::Identifier, parse_identifier);
+        parser.register_prefix(TokenType::Integer, parse_integer_literal);
+
+        parser
+    }
+
+    fn register_prefix(&mut self, token_type: TokenType, func: PrefixParseFn) {
+        self.prefix_parse_fns.insert(token_type, func);
+    }
+
+    fn register_infix(&mut self, token_type: TokenType, func: InfixParseFn) {
+        self.infix_parse_fns.insert(token_type, func);
     }
 
     pub fn get_errors(&self) -> Vec<String> {
@@ -59,7 +97,7 @@ impl<'a> Parser<'a> {
         match self.current_token.kind {
             TokenType::Let => self.parse_let_statement().map(Statement::Let),
             TokenType::Return => self.parse_return_statement().map(Statement::Return),
-            _ => None,
+            _ => self.parse_expression_statement().map(Statement::Expression),
         }
     }
 
@@ -79,24 +117,36 @@ impl<'a> Parser<'a> {
             return None;
         }
 
-        let value = self.parse_expression();
+        self.next_token(); // Skip =
+
+        let value = self.parse_expression(Precedence::Lowest);
 
         while !self.current_token_is(TokenType::Semicolon) {
             self.next_token();
         }
 
-        Some(LetStatement::new(let_token, identifier, value))
+        Some(LetStatement::new(let_token, identifier, value?))
     }
 
     fn parse_return_statement(&mut self) -> Option<ReturnStatement> {
         let token: Token = self.current_token.clone();
 
-        let value = self.parse_expression();
+        self.next_token(); // skip return
+
+        let value = self.parse_expression(Precedence::Lowest);
         while !self.current_token_is(TokenType::Semicolon) {
             self.next_token();
         }
 
-        Some(ReturnStatement::new(token, value))
+        Some(ReturnStatement::new(token, value?))
+    }
+
+    fn parse_expression_statement(&mut self) -> Option<ExpressionStatement> {
+        let expression = self.parse_expression(Precedence::Lowest);
+        Some(ExpressionStatement::new(
+            self.current_token.clone(),
+            expression?,
+        ))
     }
 
     fn expect_peek(&mut self, token: TokenType) -> bool {
@@ -113,11 +163,34 @@ impl<'a> Parser<'a> {
         return self.current_token.kind == token;
     }
 
-    fn parse_expression(&mut self) -> Expression {
-        // Parse an expression (dummy implementation for now)
-        Expression::Identifier(Identifier::new(
-            self.current_token.clone(),
-            self.current_token.lexeme.clone(),
-        ))
+    fn parse_expression(&mut self, precedence: Precedence) -> Option<Expression> {
+        let prefix_fn = self.prefix_parse_fns.get(&self.current_token.kind)?;
+        let left_exp = prefix_fn(self)?;
+        Some(left_exp)
     }
+}
+
+pub fn parse_identifier(parser: &mut Parser<'_>) -> Option<Expression> {
+    Some(Expression::Identifier(Identifier::new(
+        parser.current_token.clone(),
+        parser.current_token.lexeme.clone(),
+    )))
+}
+
+pub fn parse_integer_literal(parser: &mut Parser<'_>) -> Option<Expression> {
+    let value = match parser.current_token.lexeme.parse::<i64>() {
+        Ok(num) => num,
+        Err(_) => {
+            parser.errors.push(format!(
+                "could not parse {} as integer",
+                parser.current_token.lexeme
+            ));
+            return None;
+        }
+    };
+
+    Some(Expression::Integer(IntegerLiteral::new(
+        parser.current_token.clone(),
+        value,
+    )))
 }

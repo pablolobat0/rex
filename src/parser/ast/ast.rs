@@ -1,3 +1,5 @@
+use std::u64;
+
 use crate::lexer::token::token::Token;
 
 pub trait Node {
@@ -8,12 +10,14 @@ pub trait Node {
 #[derive(Debug)]
 pub enum Expression {
     Identifier(Identifier),
+    Integer(IntegerLiteral),
 }
 
 impl Node for Expression {
     fn get_lexeme(&self) -> String {
         match self {
             Expression::Identifier(identifier) => identifier.get_lexeme(),
+            Expression::Integer(integer) => integer.get_lexeme(),
         }
     }
 }
@@ -23,6 +27,7 @@ impl Node for Expression {
 pub enum Statement {
     Let(LetStatement),
     Return(ReturnStatement),
+    Expression(ExpressionStatement),
 }
 
 impl Node for Statement {
@@ -30,7 +35,26 @@ impl Node for Statement {
         match self {
             Statement::Let(statement) => statement.get_lexeme(),
             Statement::Return(statement) => statement.get_lexeme(),
+            Statement::Expression(statement) => statement.get_lexeme(),
         }
+    }
+}
+
+#[derive(Debug)]
+pub struct ExpressionStatement {
+    pub token: Token,
+    pub expression: Expression,
+}
+
+impl Node for ExpressionStatement {
+    fn get_lexeme(&self) -> String {
+        self.expression.get_lexeme()
+    }
+}
+
+impl ExpressionStatement {
+    pub fn new(token: Token, expression: Expression) -> ExpressionStatement {
+        ExpressionStatement { token, expression }
     }
 }
 
@@ -116,5 +140,23 @@ impl Node for ReturnStatement {
 impl ReturnStatement {
     pub fn new(token: Token, value: Expression) -> ReturnStatement {
         ReturnStatement { token, value }
+    }
+}
+
+#[derive(Debug)]
+pub struct IntegerLiteral {
+    token: Token,
+    pub value: i64,
+}
+
+impl Node for IntegerLiteral {
+    fn get_lexeme(&self) -> String {
+        self.token.lexeme.clone()
+    }
+}
+
+impl IntegerLiteral {
+    pub fn new(token: Token, value: i64) -> IntegerLiteral {
+        IntegerLiteral { token, value }
     }
 }
