@@ -7,8 +7,8 @@ use std::str::FromStr;
 use crate::parser::ast::ast::Identifier;
 
 use super::ast::ast::{
-    Expression, ExpressionStatement, IntegerLiteral, LetStatement, Program, ReturnStatement,
-    Statement,
+    Expression, ExpressionStatement, IntegerLiteral, LetStatement, PrefixExpression, Program,
+    ReturnStatement, Statement,
 };
 use std::collections::HashMap;
 
@@ -52,6 +52,8 @@ impl<'a> Parser<'a> {
 
         parser.register_prefix(TokenType::Identifier, parse_identifier);
         parser.register_prefix(TokenType::Integer, parse_integer_literal);
+        parser.register_prefix(TokenType::Minus, parse_prefix_expression);
+        parser.register_prefix(TokenType::Bang, parse_prefix_expression);
 
         parser
     }
@@ -143,10 +145,16 @@ impl<'a> Parser<'a> {
 
     fn parse_expression_statement(&mut self) -> Option<ExpressionStatement> {
         let expression = self.parse_expression(Precedence::Lowest);
-        Some(ExpressionStatement::new(
+        let expression_statement = Some(ExpressionStatement::new(
             self.current_token.clone(),
             expression?,
-        ))
+        ));
+
+        if self.peek_token.kind == TokenType::Semicolon {
+            self.next_token();
+        }
+
+        return expression_statement;
     }
 
     fn expect_peek(&mut self, token: TokenType) -> bool {
@@ -164,7 +172,16 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_expression(&mut self, precedence: Precedence) -> Option<Expression> {
-        let prefix_fn = self.prefix_parse_fns.get(&self.current_token.kind)?;
+        let prefix_fn = match self.prefix_parse_fns.get(&self.current_token.kind) {
+            Some(prefix_fn) => prefix_fn,
+            None => {
+                self.errors.push(format!(
+                    "No prefix parse function found for token: {}",
+                    self.current_token.kind
+                ));
+                return None;
+            }
+        };
         let left_exp = prefix_fn(self)?;
         Some(left_exp)
     }
@@ -192,5 +209,18 @@ pub fn parse_integer_literal(parser: &mut Parser<'_>) -> Option<Expression> {
     Some(Expression::Integer(IntegerLiteral::new(
         parser.current_token.clone(),
         value,
+    )))
+}
+
+pub fn parse_prefix_expression(parser: &mut Parser<'_>) -> Option<Expression> {
+    let token = parser.current_token.clone();
+    let operator = parser.current_token.lexeme.clone();
+
+    parser.next_token();
+
+    let right = parser.parse_expression(Precedence::Prefix);
+
+    Some(Expression::Prefix(PrefixExpression::new(
+        token, operator, right?,
     )))
 }

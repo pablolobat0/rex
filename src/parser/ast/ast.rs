@@ -11,6 +11,7 @@ pub trait Node {
 pub enum Expression {
     Identifier(Identifier),
     Integer(IntegerLiteral),
+    Prefix(PrefixExpression),
 }
 
 impl Node for Expression {
@@ -18,6 +19,7 @@ impl Node for Expression {
         match self {
             Expression::Identifier(identifier) => identifier.get_lexeme(),
             Expression::Integer(integer) => integer.get_lexeme(),
+            Expression::Prefix(prefix_expression) => prefix_expression.get_lexeme(),
         }
     }
 }
@@ -158,5 +160,28 @@ impl Node for IntegerLiteral {
 impl IntegerLiteral {
     pub fn new(token: Token, value: i64) -> IntegerLiteral {
         IntegerLiteral { token, value }
+    }
+}
+
+#[derive(Debug)]
+pub struct PrefixExpression {
+    pub token: Token,
+    pub operator: String,
+    pub right: Box<Expression>,
+}
+
+impl Node for PrefixExpression {
+    fn get_lexeme(&self) -> String {
+        self.token.lexeme.clone()
+    }
+}
+
+impl PrefixExpression {
+    pub fn new(token: Token, operator: String, right: Expression) -> PrefixExpression {
+        PrefixExpression {
+            token,
+            operator,
+            right: Box::new(right),
+        }
     }
 }
