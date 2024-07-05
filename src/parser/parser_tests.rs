@@ -6,7 +6,12 @@ use crate::parser::parser::Parser;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::parser::ast::ast::{Expression, ExpressionStatement, Node};
+    use crate::{
+        lexer,
+        parser::ast::ast::{
+            Expression, ExpressionStatement, IntegerLiteral, Node, PrefixExpression,
+        },
+    };
 
     #[test]
     fn test_let_and_return_statements() {
@@ -107,8 +112,54 @@ mod tests {
                 Expression::Integer(integer_literal) => {
                     assert_eq!(integer_literal.get_lexeme(), expected_value);
                 }
+                _ => panic!("stmt is not an Identifier or an Integer. Got={:?}", stmt),
             },
             _ => panic!("stmt is not an ExpressionStatement. Got={:?}", stmt),
+        }
+    }
+    #[test]
+    fn test_prefix_expressions() {
+        let prefix_tests = vec![("-5", "-", 5), ("!5", "!", 5)];
+
+        for (input, operator, value) in prefix_tests {
+            let lexer = Lexer::new(input);
+            let mut parser = Parser::new(lexer);
+            let program = parser.parse_program();
+
+            check_parser_errors(&parser);
+
+            assert_eq!(program.statements.len(), 1, "Expected 1 statement");
+
+            let stmt = &program.statements[0];
+            match stmt {
+                Statement::Expression(ExpressionStatement { expression, .. }) => match expression {
+                    Expression::Prefix(PrefixExpression {
+                        operator: op,
+                        right,
+                        ..
+                    }) => {
+                        assert_eq!(
+                            op, operator,
+                            "Expected operator '{}', got '{}'",
+                            operator, op
+                        );
+                        match right.as_ref() {
+                            Expression::Integer(IntegerLiteral {
+                                value: int_value, ..
+                            }) => {
+                                assert_eq!(
+                                    *int_value, value,
+                                    "Expected value '{}', got '{}'",
+                                    value, int_value
+                                );
+                            }
+                            _ => panic!("Expected integer literal, got {:?}", right),
+                        }
+                    }
+                    _ => panic!("Expected prefix expression, got {:?}", expression),
+                },
+                _ => panic!("Expected expression statement, got {:?}", stmt),
+            }
         }
     }
 }
