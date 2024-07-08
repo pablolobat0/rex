@@ -1,9 +1,8 @@
-use std::u64;
-
 use crate::lexer::token::token::Token;
 
 pub trait Node {
     fn get_lexeme(&self) -> String;
+    fn to_string(&self) -> String;
 }
 
 // An expression computes a value
@@ -24,6 +23,15 @@ impl Node for Expression {
             Expression::Infix(infinx_expression) => infinx_expression.get_lexeme(),
         }
     }
+
+    fn to_string(&self) -> String {
+        match self {
+            Expression::Identifier(identifier) => identifier.to_string(),
+            Expression::Integer(integer) => integer.to_string(),
+            Expression::Prefix(prefix_expression) => prefix_expression.to_string(),
+            Expression::Infix(infinx_expression) => infinx_expression.to_string(),
+        }
+    }
 }
 
 // A statement expresses some action, but does not generate a value
@@ -42,6 +50,14 @@ impl Node for Statement {
             Statement::Expression(statement) => statement.get_lexeme(),
         }
     }
+
+    fn to_string(&self) -> String {
+        match self {
+            Statement::Let(statement) => statement.to_string(),
+            Statement::Return(statement) => statement.to_string(),
+            Statement::Expression(statement) => statement.to_string(),
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -53,6 +69,10 @@ pub struct ExpressionStatement {
 impl Node for ExpressionStatement {
     fn get_lexeme(&self) -> String {
         self.expression.get_lexeme()
+    }
+
+    fn to_string(&self) -> String {
+        self.expression.to_string()
     }
 }
 
@@ -76,6 +96,14 @@ impl Program {
 
 impl Node for Program {
     fn get_lexeme(&self) -> String {
+        if self.statements.len() > 1 {
+            return self.statements[0].get_lexeme();
+        } else {
+            return "".to_string();
+        }
+    }
+
+    fn to_string(&self) -> String {
         self.statements
             .iter()
             .map(|statement| statement.get_lexeme())
@@ -103,10 +131,14 @@ impl LetStatement {
 
 impl Node for LetStatement {
     fn get_lexeme(&self) -> String {
+        self.token.lexeme.clone()
+    }
+
+    fn to_string(&self) -> String {
         format!(
             "let {} = {}",
-            self.identifier.get_lexeme(),
-            self.value.get_lexeme()
+            self.identifier.to_string(),
+            self.value.to_string()
         )
     }
 }
@@ -127,6 +159,10 @@ impl Node for Identifier {
     fn get_lexeme(&self) -> String {
         return self.token.lexeme.clone();
     }
+
+    fn to_string(&self) -> String {
+        self.name.clone()
+    }
 }
 
 #[derive(Debug)]
@@ -137,7 +173,11 @@ pub struct ReturnStatement {
 
 impl Node for ReturnStatement {
     fn get_lexeme(&self) -> String {
-        format!("{} {}", self.token.kind, self.value.get_lexeme())
+        self.token.lexeme.clone()
+    }
+
+    fn to_string(&self) -> String {
+        format!("return {}", self.value.to_string())
     }
 }
 
@@ -157,6 +197,10 @@ impl Node for IntegerLiteral {
     fn get_lexeme(&self) -> String {
         self.token.lexeme.clone()
     }
+
+    fn to_string(&self) -> String {
+        self.value.to_string()
+    }
 }
 
 impl IntegerLiteral {
@@ -175,6 +219,10 @@ pub struct PrefixExpression {
 impl Node for PrefixExpression {
     fn get_lexeme(&self) -> String {
         self.token.lexeme.clone()
+    }
+
+    fn to_string(&self) -> String {
+        format!("{}{}", self.operator, self.right.to_string())
     }
 }
 
@@ -199,6 +247,15 @@ pub struct InfixExpression {
 impl Node for InfixExpression {
     fn get_lexeme(&self) -> String {
         self.token.lexeme.clone()
+    }
+
+    fn to_string(&self) -> String {
+        format!(
+            "{} {} {}",
+            self.left.to_string(),
+            self.operator,
+            self.right.to_string()
+        )
     }
 }
 
