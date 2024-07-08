@@ -118,6 +118,42 @@ mod tests {
             _ => panic!("stmt is not an ExpressionStatement. Got={:?}", stmt),
         }
     }
+
+    #[test]
+    fn test_boolean_literals() {
+        let input = "
+        false;
+        true;
+        ";
+
+        let lexer = Lexer::new(input);
+        let mut parser = Parser::new(lexer);
+
+        let program = parser.parse_program();
+        check_parser_errors(&parser);
+
+        assert_eq!(program.statements.len(), 2);
+
+        let expected_values = vec![false, true];
+
+        for (i, expected_value) in expected_values.iter().enumerate() {
+            let stmt = &program.statements[i];
+            test_boolean_literal(stmt, expected_value);
+        }
+    }
+
+    fn test_boolean_literal(stmt: &Statement, expected_value: &bool) {
+        match stmt {
+            Statement::Expression(expression_stmt) => match &expression_stmt.expression {
+                Expression::Boolean(boolean_literal) => {
+                    assert_eq!(boolean_literal.value, *expected_value);
+                }
+                _ => panic!("stmt is not an Bollean. Got={:?}", stmt),
+            },
+            _ => panic!("stmt is not an ExpressionStatement. Got={:?}", stmt),
+        }
+    }
+
     #[test]
     fn test_prefix_expressions() {
         let prefix_tests = vec![("-5", "-", 5), ("!5", "!", 5)];
