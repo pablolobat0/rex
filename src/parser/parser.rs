@@ -2,7 +2,6 @@ use crate::lexer::{
     lexer::Lexer,
     token::token::{Token, TokenType},
 };
-use std::str::FromStr;
 
 use crate::parser::ast::ast::Identifier;
 
@@ -88,7 +87,11 @@ impl<'a> Parser<'a> {
             "Expected next token to be {}, got {} instead",
             expected_token, self.peek_token.kind
         );
-        self.errors.push(message);
+        self.add_error(message, self.peek_token.line);
+    }
+
+    fn add_error(&mut self, message: String, line: u32) {
+        self.errors.push(format!("Line {}: {}", line, message));
     }
 
     fn next_token(&mut self) {
@@ -134,13 +137,18 @@ impl<'a> Parser<'a> {
 
         self.next_token(); // Skip =
 
-        let value = self.parse_expression(Precedence::Lowest);
+        let value = match self.parse_expression(Precedence::Lowest) {
+            Some(expr) => expr,
+            None => {
+                return None;
+            }
+        };
 
         while !self.current_token_is(TokenType::Semicolon) {
             self.next_token();
         }
 
-        Some(LetStatement::new(let_token, identifier, value?))
+        Some(LetStatement::new(let_token, identifier, value))
     }
 
     fn parse_return_statement(&mut self) -> Option<ReturnStatement> {
@@ -148,19 +156,30 @@ impl<'a> Parser<'a> {
 
         self.next_token(); // skip return
 
-        let value = self.parse_expression(Precedence::Lowest);
+        let value = match self.parse_expression(Precedence::Lowest) {
+            Some(expr) => expr,
+            None => {
+                return None;
+            }
+        };
+
         while !self.current_token_is(TokenType::Semicolon) {
             self.next_token();
         }
 
-        Some(ReturnStatement::new(token, value?))
+        Some(ReturnStatement::new(token, value))
     }
 
     fn parse_expression_statement(&mut self) -> Option<ExpressionStatement> {
-        let expression = self.parse_expression(Precedence::Lowest);
+        let expression = match self.parse_expression(Precedence::Lowest) {
+            Some(expr) => expr,
+            None => {
+                return None;
+            }
+        };
         let expression_statement = Some(ExpressionStatement::new(
             self.current_token.clone(),
-            expression?,
+            expression,
         ));
 
         if self.peek_token.kind == TokenType::Semicolon {
@@ -188,25 +207,36 @@ impl<'a> Parser<'a> {
         let prefix_fn = match self.prefix_parse_fns.get(&self.current_token.kind) {
             Some(prefix_fn) => prefix_fn,
             None => {
-                self.errors.push(format!(
-                    "No prefix parse function found for token: {}",
-                    self.current_token.kind
-                ));
+                self.add_error(
+                    format!(
+                        "No prefix parse function found for token: {}",
+                        self.current_token.kind
+                    ),
+                    self.current_token.line,
+                );
                 return None;
             }
         };
 
-        let mut left_exp = prefix_fn(self)?;
+        let mut left_exp = match prefix_fn(self) {
+            Some(expr) => expr,
+            None => {
+                return None;
+            }
+        };
 
         while !self.current_token_is(TokenType::Semicolon) && precedence < self.peek_precedence() {
             self.next_token(); // skip token
             let infix_fn = match self.infix_parse_fns.get(&self.current_token.kind) {
                 Some(infix_fn) => infix_fn,
                 None => {
-                    self.errors.push(format!(
-                        "No infix parse function found for token {}",
-                        self.current_token.kind
-                    ));
+                    self.add_error(
+                        format!(
+                            "No infix parse function found for token {}",
+                            self.current_token.kind
+                        ),
+                        self.current_token.line,
+                    );
                     return None;
                 }
             };
@@ -258,10 +288,10 @@ pub fn parse_integer_literal(parser: &mut Parser<'_>) -> Option<Expression> {
     let value = match parser.current_token.lexeme.parse::<i64>() {
         Ok(num) => num,
         Err(_) => {
-            parser.errors.push(format!(
-                "could not parse {} as integer",
-                parser.current_token.lexeme
-            ));
+            parser.add_error(
+                format!("could not parse {} as integer", parser.current_token.lexeme),
+                parser.current_token.line,
+            );
             return None;
         }
     };
@@ -281,10 +311,13 @@ pub fn parse_prefix_expression(parser: &mut Parser<'_>) -> Option<Expression> {
     let right = match parser.parse_expression(Precedence::Prefix) {
         Some(expr) => expr,
         None => {
-            parser.errors.push(format!(
-                "could not parse right-hand side of prefix expression for operator {}",
-                operator
-            ));
+            parser.add_error(
+                format!(
+                    "could not parse right-hand side of prefix expression for operator {}",
+                    operator
+                ),
+                parser.current_token.line,
+            );
             return None;
         }
     };
@@ -304,10 +337,13 @@ pub fn parse_infix_expression(parser: &mut Parser<'_>, left: Expression) -> Opti
     let right = match parser.parse_expression(precedence) {
         Some(expr) => expr,
         None => {
-            parser.errors.push(format!(
-                "could not parse right-hand side of infix expression for operator {}",
-                operator
-            ));
+            parser.add_error(
+                format!(
+                    "could not parse right-hand side of infix expression for operator {}",
+                    operator
+                ),
+                parser.current_token.line,
+            );
             return None;
         }
     };
