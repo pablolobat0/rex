@@ -6,12 +6,8 @@ use crate::parser::parser::Parser;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        lexer,
-        parser::ast::ast::{
-            Expression, ExpressionStatement, InfixExpression, IntegerLiteral, Node,
-            PrefixExpression,
-        },
+    use crate::parser::ast::ast::{
+        Expression, ExpressionStatement, InfixExpression, IntegerLiteral, Node, PrefixExpression,
     };
 
     #[test]
@@ -262,30 +258,30 @@ mod tests {
     #[test]
     fn test_operator_precedence_parsing() {
         let tests = vec![
-            ("-a * b", "((-a) * b)"),
-            ("!-a", "(!(-a))"),
-            ("a + b + c", "((a + b) + c)"),
-            ("a + b - c", "((a + b) - c)"),
-            ("a * b * c", "((a * b) * c)"),
-            ("a * b / c", "((a * b) / c)"),
-            ("a + b / c", "(a + (b / c))"),
-            ("a + b * c + d / e - f", "(((a + (b * c)) + (d / e)) - f)"),
-            ("3 + 4; -5 * 5", "(3 + 4)\n((-5) * 5)"),
-            ("5 > 4 == 3 < 4", "((5 > 4) == (3 < 4))"),
-            ("5 < 4 != 3 > 4", "((5 < 4) != (3 > 4))"),
+            ("-a * b", "((-a) * b);"),
+            ("!-a", "(!(-a));"),
+            ("a + b + c", "((a + b) + c);"),
+            ("a + b - c", "((a + b) - c);"),
+            ("a * b * c", "((a * b) * c);"),
+            ("a * b / c", "((a * b) / c);"),
+            ("a + b / c", "(a + (b / c));"),
+            ("a + b * c + d / e - f", "(((a + (b * c)) + (d / e)) - f);"),
+            ("3 + 4; -5 * 5", "(3 + 4);\n((-5) * 5);"),
+            ("5 > 4 == 3 < 4", "((5 > 4) == (3 < 4));"),
+            ("5 < 4 != 3 > 4", "((5 < 4) != (3 > 4));"),
             (
                 "3 + 4 * 5 == 3 * 1 + 4 * 5",
-                "((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))",
+                "((3 + (4 * 5)) == ((3 * 1) + (4 * 5)));",
             ),
-            ("true", "true"),
-            ("false", "false"),
-            ("3 > 5 == false", "((3 > 5) == false)"),
-            ("3 < 5 == true", "((3 < 5) == true)"),
-            ("1 + (2 + 3) + 4", "((1 + (2 + 3)) + 4)"),
-            ("(5 + 5) * 2", "((5 + 5) * 2)"),
-            ("2 / (5 + 5)", "(2 / (5 + 5))"),
-            ("-(5 + 5)", "(-(5 + 5))"),
-            ("!(true == true)", "(!(true == true))"),
+            ("true", "true;"),
+            ("false", "false;"),
+            ("3 > 5 == false", "((3 > 5) == false);"),
+            ("3 < 5 == true", "((3 < 5) == true);"),
+            ("1 + (2 + 3) + 4", "((1 + (2 + 3)) + 4);"),
+            ("(5 + 5) * 2", "((5 + 5) * 2);"),
+            ("2 / (5 + 5)", "(2 / (5 + 5));"),
+            ("-(5 + 5)", "(-(5 + 5));"),
+            ("!(true == true)", "(!(true == true));"),
         ];
 
         for (input, expected) in tests {
@@ -297,5 +293,41 @@ mod tests {
             let actual = program.to_string();
             assert_eq!(actual, expected, "input: {}", input);
         }
+    }
+
+    #[test]
+    fn test_if_expression_with_multiple_statements() {
+        let input = r#"
+        if (x < y) {
+            let a = 5;
+            a;
+        } else {
+            let b = 10;
+            b;
+        }
+        "#;
+        let expected = "if (x < y) { let a = 5;\na; } else { let b = 10;\nb; }";
+        check_parse_if_expression(input, expected);
+    }
+
+    #[test]
+    fn test_if_expression_without_alternative() {
+        let input = r#"
+        if (x < y) {
+            let a = 5;
+            a;
+        }
+        "#;
+        let expected = "if (x < y) { let a = 5;\na; }";
+        check_parse_if_expression(input, expected);
+    }
+    fn check_parse_if_expression(input: &str, expected: &str) {
+        let lexer = Lexer::new(input);
+        let mut parser = Parser::new(lexer);
+        let program = parser.parse_program();
+        check_parser_errors(&parser);
+
+        assert_eq!(parser.errors.len(), 0, "Parser errors: {:?}", parser.errors);
+        assert_eq!(program.to_string(), expected, "input: {}", input);
     }
 }
