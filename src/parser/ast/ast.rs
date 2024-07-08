@@ -109,7 +109,7 @@ impl Node for Program {
     fn to_string(&self) -> String {
         self.statements
             .iter()
-            .map(|statement| statement.get_lexeme())
+            .map(|statement| statement.to_string())
             .collect::<Vec<String>>()
             .join("\n")
     }
@@ -139,7 +139,8 @@ impl Node for LetStatement {
 
     fn to_string(&self) -> String {
         format!(
-            "let {} = {}",
+            "{} {} = {}",
+            self.token.lexeme,
             self.identifier.to_string(),
             self.value.to_string()
         )
@@ -180,7 +181,7 @@ impl Node for ReturnStatement {
     }
 
     fn to_string(&self) -> String {
-        format!("return {}", self.value.to_string())
+        format!("{} {}", self.token.lexeme.clone(), self.value.to_string())
     }
 }
 
@@ -202,7 +203,7 @@ impl Node for IntegerLiteral {
     }
 
     fn to_string(&self) -> String {
-        self.value.to_string()
+        self.token.lexeme.clone()
     }
 }
 
@@ -224,11 +225,7 @@ impl Node for BooleanLiteral {
     }
 
     fn to_string(&self) -> String {
-        if self.value {
-            "true".to_string()
-        } else {
-            "false".to_string()
-        }
+        self.token.lexeme.clone()
     }
 }
 
@@ -251,7 +248,7 @@ impl Node for PrefixExpression {
     }
 
     fn to_string(&self) -> String {
-        format!("{}{}", self.operator, self.right.to_string())
+        format!("({}{})", self.operator, self.right.to_string())
     }
 }
 
@@ -280,7 +277,7 @@ impl Node for InfixExpression {
 
     fn to_string(&self) -> String {
         format!(
-            "{} {} {}",
+            "({} {} {})",
             self.left.to_string(),
             self.operator,
             self.right.to_string()
