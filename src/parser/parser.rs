@@ -6,8 +6,8 @@ use crate::lexer::{
 use crate::parser::ast::ast::Identifier;
 
 use super::ast::ast::{
-    BooleanLiteral, Expression, ExpressionStatement, InfixExpression, IntegerLiteral, LetStatement,
-    PrefixExpression, Program, ReturnStatement, Statement,
+    BlockStatement, BooleanLiteral, Expression, ExpressionStatement, IfExpression, InfixExpression,
+    IntegerLiteral, LetStatement, PrefixExpression, Program, ReturnStatement, Statement,
 };
 use std::collections::HashMap;
 
@@ -58,6 +58,7 @@ impl<'a> Parser<'a> {
         parser.register_prefix(TokenType::Minus, parse_prefix_expression);
         parser.register_prefix(TokenType::Bang, parse_prefix_expression);
         parser.register_prefix(TokenType::LeftParen, parse_grouped_expression);
+        parser.register_prefix(TokenType::If, parse_if_expression);
 
         parser.register_infix(TokenType::Plus, parse_infix_expression);
         parser.register_infix(TokenType::Minus, parse_infix_expression);
@@ -174,16 +175,14 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_expression_statement(&mut self) -> Option<ExpressionStatement> {
+        let token = self.current_token.clone();
         let expression = match self.parse_expression(Precedence::Lowest) {
             Some(expr) => expr,
             None => {
                 return None;
             }
         };
-        let expression_statement = Some(ExpressionStatement::new(
-            self.current_token.clone(),
-            expression,
-        ));
+        let expression_statement = Some(ExpressionStatement::new(token, expression));
 
         if self.peek_token.kind == TokenType::Semicolon {
             self.next_token();
@@ -261,6 +260,23 @@ impl<'a> Parser<'a> {
             .precedences
             .get(&self.peek_token.kind)
             .unwrap_or(&Precedence::Lowest)
+    }
+
+    fn parse_block_statement(&mut self) -> BlockStatement {
+        let mut block_statement = BlockStatement::new(self.current_token.clone());
+
+        self.next_token(); // skip left brace
+
+        while !self.current_token_is(TokenType::RightBrace)
+            && !self.current_token_is(TokenType::EOF)
+        {
+            if let Some(statement) = self.parse_statement() {
+                block_statement.add_statement(statement);
+            }
+            self.next_token();
+        }
+
+        block_statement
     }
 }
 
@@ -383,4 +399,34 @@ fn parse_grouped_expression(parser: &mut Parser<'_>) -> Option<Expression> {
     }
 
     return expression;
+}
+
+fn parse_if_expression(parser: &mut Parser<'_>) -> Option<Expression> {
+    let token = parser.current_token.clone(); // if token
+    parser.next_token(); // skip if
+    let condition = parser.parse_expression(Precedence::Lowest);
+
+    if !parser.expect_peek(TokenType::LeftBrace) {
+        return None;
+    }
+
+    let consequence = parser.parse_block_statement();
+    parser.next_token(); // Skip rigth brace
+    let mut alternative: Option<BlockStatement> = None;
+
+    if parser.current_token_is(TokenType::Else) {
+        if !parser.expect_peek(TokenType::LeftBrace) {
+            return None;
+        }
+
+        alternative = Some(parser.parse_block_statement());
+        parser.next_token(); // Skip rigth brace
+    }
+
+    return Some(Expression::If(IfExpression::new(
+        token,
+        condition?,
+        consequence,
+        alternative,
+    )));
 }
