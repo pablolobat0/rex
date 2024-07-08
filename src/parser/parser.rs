@@ -7,12 +7,12 @@ use std::str::FromStr;
 use crate::parser::ast::ast::Identifier;
 
 use super::ast::ast::{
-    Expression, ExpressionStatement, IntegerLiteral, LetStatement, PrefixExpression, Program,
-    ReturnStatement, Statement,
+    Expression, ExpressionStatement, InfixExpression, IntegerLiteral, LetStatement,
+    PrefixExpression, Program, ReturnStatement, Statement,
 };
 use std::collections::HashMap;
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 enum Precedence {
     Lowest,
     Equals,      // ==
@@ -34,6 +34,7 @@ pub struct Parser<'a> {
     pub errors: Vec<String>,
     prefix_parse_fns: HashMap<TokenType, PrefixParseFn>,
     infix_parse_fns: HashMap<TokenType, InfixParseFn>,
+    precedences: HashMap<TokenType, Precedence>,
 }
 
 impl<'a> Parser<'a> {
@@ -48,12 +49,24 @@ impl<'a> Parser<'a> {
             errors: vec![],
             prefix_parse_fns: HashMap::new(),
             infix_parse_fns: HashMap::new(),
+            precedences: create_precedences(),
         };
 
         parser.register_prefix(TokenType::Identifier, parse_identifier);
         parser.register_prefix(TokenType::Integer, parse_integer_literal);
         parser.register_prefix(TokenType::Minus, parse_prefix_expression);
         parser.register_prefix(TokenType::Bang, parse_prefix_expression);
+
+        parser.register_infix(TokenType::Plus, parse_infix_expression);
+        parser.register_infix(TokenType::Minus, parse_infix_expression);
+        parser.register_infix(TokenType::Star, parse_infix_expression);
+        parser.register_infix(TokenType::Slash, parse_infix_expression);
+        parser.register_infix(TokenType::EqualEqual, parse_infix_expression);
+        parser.register_infix(TokenType::BangEqual, parse_infix_expression);
+        parser.register_infix(TokenType::Greater, parse_infix_expression);
+        parser.register_infix(TokenType::GreaterEqual, parse_infix_expression);
+        parser.register_infix(TokenType::Less, parse_infix_expression);
+        parser.register_infix(TokenType::LessEqual, parse_infix_expression);
 
         parser
     }
@@ -182,9 +195,56 @@ impl<'a> Parser<'a> {
                 return None;
             }
         };
-        let left_exp = prefix_fn(self)?;
+
+        let mut left_exp = prefix_fn(self)?;
+
+        while !self.current_token_is(TokenType::Semicolon) && precedence < self.peek_precedence() {
+            self.next_token(); // skip token
+            let infix_fn = match self.infix_parse_fns.get(&self.current_token.kind) {
+                Some(infix_fn) => infix_fn,
+                None => {
+                    self.errors.push(format!(
+                        "No infix parse function found for token {}",
+                        self.current_token.kind
+                    ));
+                    return None;
+                }
+            };
+            left_exp = infix_fn(self, left_exp)?;
+        }
+
         Some(left_exp)
     }
+
+    fn current_precedence(&self) -> Precedence {
+        *self
+            .precedences
+            .get(&self.current_token.kind)
+            .unwrap_or(&Precedence::Lowest)
+    }
+
+    fn peek_precedence(&self) -> Precedence {
+        *self
+            .precedences
+            .get(&self.peek_token.kind)
+            .unwrap_or(&Precedence::Lowest)
+    }
+}
+
+fn create_precedences() -> HashMap<TokenType, Precedence> {
+    let mut precedences = HashMap::new();
+    precedences.insert(TokenType::EqualEqual, Precedence::Equals);
+    precedences.insert(TokenType::BangEqual, Precedence::Equals);
+    precedences.insert(TokenType::Greater, Precedence::LessGreater);
+    precedences.insert(TokenType::GreaterEqual, Precedence::LessGreater);
+    precedences.insert(TokenType::Less, Precedence::LessGreater);
+    precedences.insert(TokenType::LessEqual, Precedence::LessGreater);
+    precedences.insert(TokenType::Plus, Precedence::Sum);
+    precedences.insert(TokenType::Minus, Precedence::Sum);
+    precedences.insert(TokenType::Star, Precedence::Product);
+    precedences.insert(TokenType::Slash, Precedence::Product);
+
+    precedences
 }
 
 pub fn parse_identifier(parser: &mut Parser<'_>) -> Option<Expression> {
@@ -218,9 +278,41 @@ pub fn parse_prefix_expression(parser: &mut Parser<'_>) -> Option<Expression> {
 
     parser.next_token();
 
-    let right = parser.parse_expression(Precedence::Prefix);
+    let right = match parser.parse_expression(Precedence::Prefix) {
+        Some(expr) => expr,
+        None => {
+            parser.errors.push(format!(
+                "could not parse right-hand side of prefix expression for operator {}",
+                operator
+            ));
+            return None;
+        }
+    };
 
     Some(Expression::Prefix(PrefixExpression::new(
-        token, operator, right?,
+        token, operator, right,
+    )))
+}
+
+pub fn parse_infix_expression(parser: &mut Parser<'_>, left: Expression) -> Option<Expression> {
+    let token = parser.current_token.clone();
+    let operator = parser.current_token.lexeme.clone();
+    let precedence = parser.current_precedence();
+
+    parser.next_token();
+
+    let right = match parser.parse_expression(precedence) {
+        Some(expr) => expr,
+        None => {
+            parser.errors.push(format!(
+                "could not parse right-hand side of infix expression for operator {}",
+                operator
+            ));
+            return None;
+        }
+    };
+
+    Some(Expression::Infix(InfixExpression::new(
+        token, left, operator, right,
     )))
 }

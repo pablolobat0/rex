@@ -12,6 +12,7 @@ pub enum Expression {
     Identifier(Identifier),
     Integer(IntegerLiteral),
     Prefix(PrefixExpression),
+    Infix(InfixExpression),
 }
 
 impl Node for Expression {
@@ -20,6 +21,7 @@ impl Node for Expression {
             Expression::Identifier(identifier) => identifier.get_lexeme(),
             Expression::Integer(integer) => integer.get_lexeme(),
             Expression::Prefix(prefix_expression) => prefix_expression.get_lexeme(),
+            Expression::Infix(infinx_expression) => infinx_expression.get_lexeme(),
         }
     }
 }
@@ -180,6 +182,36 @@ impl PrefixExpression {
     pub fn new(token: Token, operator: String, right: Expression) -> PrefixExpression {
         PrefixExpression {
             token,
+            operator,
+            right: Box::new(right),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct InfixExpression {
+    pub token: Token,
+    pub left: Box<Expression>,
+    pub operator: String,
+    pub right: Box<Expression>,
+}
+
+impl Node for InfixExpression {
+    fn get_lexeme(&self) -> String {
+        self.token.lexeme.clone()
+    }
+}
+
+impl InfixExpression {
+    pub fn new(
+        token: Token,
+        left: Expression,
+        operator: String,
+        right: Expression,
+    ) -> InfixExpression {
+        InfixExpression {
+            token,
+            left: Box::new(left),
             operator,
             right: Box::new(right),
         }
