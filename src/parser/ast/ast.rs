@@ -1,4 +1,4 @@
-use crate::lexer::token::token::Token;
+use crate::lexer::token::{self, token::Token};
 
 pub trait Node {
     fn get_lexeme(&self) -> String;
@@ -10,6 +10,7 @@ pub trait Node {
 pub enum Expression {
     Identifier(Identifier),
     Integer(IntegerLiteral),
+    Boolean(BooleanLiteral),
     Prefix(PrefixExpression),
     Infix(InfixExpression),
 }
@@ -19,6 +20,7 @@ impl Node for Expression {
         match self {
             Expression::Identifier(identifier) => identifier.get_lexeme(),
             Expression::Integer(integer) => integer.get_lexeme(),
+            Expression::Boolean(boolean) => boolean.get_lexeme(),
             Expression::Prefix(prefix_expression) => prefix_expression.get_lexeme(),
             Expression::Infix(infinx_expression) => infinx_expression.get_lexeme(),
         }
@@ -28,6 +30,7 @@ impl Node for Expression {
         match self {
             Expression::Identifier(identifier) => identifier.to_string(),
             Expression::Integer(integer) => integer.to_string(),
+            Expression::Boolean(boolean) => boolean.to_string(),
             Expression::Prefix(prefix_expression) => prefix_expression.to_string(),
             Expression::Infix(infinx_expression) => infinx_expression.to_string(),
         }
@@ -206,6 +209,32 @@ impl Node for IntegerLiteral {
 impl IntegerLiteral {
     pub fn new(token: Token, value: i64) -> IntegerLiteral {
         IntegerLiteral { token, value }
+    }
+}
+
+#[derive(Debug)]
+pub struct BooleanLiteral {
+    token: Token,
+    pub value: bool,
+}
+
+impl Node for BooleanLiteral {
+    fn get_lexeme(&self) -> String {
+        self.token.lexeme.clone()
+    }
+
+    fn to_string(&self) -> String {
+        if self.value {
+            "true".to_string()
+        } else {
+            "false".to_string()
+        }
+    }
+}
+
+impl BooleanLiteral {
+    pub fn new(token: Token, value: bool) -> BooleanLiteral {
+        BooleanLiteral { token, value }
     }
 }
 

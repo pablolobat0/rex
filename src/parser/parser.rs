@@ -6,7 +6,7 @@ use crate::lexer::{
 use crate::parser::ast::ast::Identifier;
 
 use super::ast::ast::{
-    Expression, ExpressionStatement, InfixExpression, IntegerLiteral, LetStatement,
+    BooleanLiteral, Expression, ExpressionStatement, InfixExpression, IntegerLiteral, LetStatement,
     PrefixExpression, Program, ReturnStatement, Statement,
 };
 use std::collections::HashMap;
@@ -53,6 +53,8 @@ impl<'a> Parser<'a> {
 
         parser.register_prefix(TokenType::Identifier, parse_identifier);
         parser.register_prefix(TokenType::Integer, parse_integer_literal);
+        parser.register_prefix(TokenType::True, parse_boolean_literal);
+        parser.register_prefix(TokenType::False, parse_boolean_literal);
         parser.register_prefix(TokenType::Minus, parse_prefix_expression);
         parser.register_prefix(TokenType::Bang, parse_prefix_expression);
 
@@ -297,6 +299,25 @@ pub fn parse_integer_literal(parser: &mut Parser<'_>) -> Option<Expression> {
     };
 
     Some(Expression::Integer(IntegerLiteral::new(
+        parser.current_token.clone(),
+        value,
+    )))
+}
+
+pub fn parse_boolean_literal(parser: &mut Parser<'_>) -> Option<Expression> {
+    let value = match parser.current_token.lexeme.as_str() {
+        "true" => true,
+        "false" => false,
+        _ => {
+            parser.errors.push(format!(
+                "expected 'true' or 'false', got {}",
+                parser.current_token.lexeme
+            ));
+            return None;
+        }
+    };
+
+    Some(Expression::Boolean(BooleanLiteral::new(
         parser.current_token.clone(),
         value,
     )))
