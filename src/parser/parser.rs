@@ -57,6 +57,7 @@ impl<'a> Parser<'a> {
         parser.register_prefix(TokenType::False, parse_boolean_literal);
         parser.register_prefix(TokenType::Minus, parse_prefix_expression);
         parser.register_prefix(TokenType::Bang, parse_prefix_expression);
+        parser.register_prefix(TokenType::LeftParen, parse_grouped_expression);
 
         parser.register_infix(TokenType::Plus, parse_infix_expression);
         parser.register_infix(TokenType::Minus, parse_infix_expression);
@@ -372,4 +373,14 @@ pub fn parse_infix_expression(parser: &mut Parser<'_>, left: Expression) -> Opti
     Some(Expression::Infix(InfixExpression::new(
         token, left, operator, right,
     )))
+}
+
+fn parse_grouped_expression(parser: &mut Parser<'_>) -> Option<Expression> {
+    parser.next_token(); // Skip left parenthesis
+    let expression = parser.parse_expression(Precedence::Lowest);
+    if !parser.expect_peek(TokenType::RightParen) {
+        return None;
+    }
+
+    return expression;
 }
