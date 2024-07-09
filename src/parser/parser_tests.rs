@@ -352,4 +352,25 @@ mod tests {
         let expected = "fn(x){let y = (x + 1);\nreturn y;}";
         check_parse_expression_statement(input, expected);
     }
+
+    #[test]
+    fn test_call_expression() {
+        let input = "add(1, 2 * 3, 4 + 5);";
+        let expected = "add(1, (2 * 3), (4 + 5));";
+        check_parse_expression_statement(input, expected);
+    }
+
+    #[test]
+    fn test_call_expression_no_arguments() {
+        let input = "doSomething();";
+        let expected = "doSomething();";
+        check_parse_expression_statement(input, expected);
+    }
+
+    #[test]
+    fn test_call_expression_with_function_literal() {
+        let input = "callFunction(fn(x) { return x + 1; }, 5);";
+        let expected = "callFunction(fn(x){return (x + 1);}, 5);";
+        check_parse_expression_statement(input, expected);
+    }
 }
