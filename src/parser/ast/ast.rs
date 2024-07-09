@@ -15,6 +15,7 @@ pub enum Expression {
     Infix(InfixExpression),
     If(IfExpression),
     Function(FunctionLiteral),
+    Call(CallExpression),
 }
 
 impl Node for Expression {
@@ -27,6 +28,7 @@ impl Node for Expression {
             Expression::Infix(infinx_expression) => infinx_expression.get_lexeme(),
             Expression::If(if_expression) => if_expression.get_lexeme(),
             Expression::Function(function_literal) => function_literal.get_lexeme(),
+            Expression::Call(call_expression) => call_expression.get_lexeme(),
         }
     }
 
@@ -39,6 +41,7 @@ impl Node for Expression {
             Expression::Infix(infinx_expression) => infinx_expression.to_string(),
             Expression::If(if_expression) => if_expression.to_string(),
             Expression::Function(function_literal) => function_literal.to_string(),
+            Expression::Call(call_expression) => call_expression.to_string(),
         }
     }
 }
@@ -92,6 +95,7 @@ impl Node for ExpressionStatement {
             Expression::Infix(infix_expression) => format!("{};", infix_expression.to_string()),
             Expression::If(if_expression) => if_expression.to_string(),
             Expression::Function(function_literal) => function_literal.to_string(),
+            Expression::Call(call_expression) => format!("{};", call_expression.to_string()),
         }
     }
 }
@@ -442,6 +446,40 @@ impl FunctionLiteral {
             token,
             arguments,
             body,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct CallExpression {
+    token: Token,
+    function: Box<Expression>,
+    arguments: Vec<Expression>,
+}
+
+impl Node for CallExpression {
+    fn get_lexeme(&self) -> String {
+        self.token.lexeme.clone()
+    }
+
+    fn to_string(&self) -> String {
+        let argumets = self
+            .arguments
+            .iter()
+            .map(|argument| argument.to_string())
+            .collect::<Vec<String>>()
+            .join(", ");
+
+        format!("{}({})", self.function.to_string(), argumets)
+    }
+}
+
+impl CallExpression {
+    pub fn new(token: Token, function: Expression, arguments: Vec<Expression>) -> CallExpression {
+        CallExpression {
+            token,
+            function: Box::new(function),
+            arguments,
         }
     }
 }

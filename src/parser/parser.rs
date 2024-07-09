@@ -6,9 +6,9 @@ use crate::lexer::{
 use crate::parser::ast::ast::Identifier;
 
 use super::ast::ast::{
-    BlockStatement, BooleanLiteral, Expression, ExpressionStatement, FunctionLiteral, IfExpression,
-    InfixExpression, IntegerLiteral, LetStatement, PrefixExpression, Program, ReturnStatement,
-    Statement,
+    BlockStatement, BooleanLiteral, CallExpression, Expression, ExpressionStatement,
+    FunctionLiteral, IfExpression, InfixExpression, IntegerLiteral, LetStatement, PrefixExpression,
+    Program, ReturnStatement, Statement,
 };
 use std::collections::HashMap;
 
@@ -72,6 +72,7 @@ impl<'a> Parser<'a> {
         parser.register_infix(TokenType::GreaterEqual, parse_infix_expression);
         parser.register_infix(TokenType::Less, parse_infix_expression);
         parser.register_infix(TokenType::LessEqual, parse_infix_expression);
+        parser.register_infix(TokenType::LeftParen, parse_call_expression);
 
         parser
     }
@@ -294,6 +295,7 @@ fn create_precedences() -> HashMap<TokenType, Precedence> {
     precedences.insert(TokenType::Minus, Precedence::Sum);
     precedences.insert(TokenType::Star, Precedence::Product);
     precedences.insert(TokenType::Slash, Precedence::Product);
+    precedences.insert(TokenType::LeftParen, Precedence::Call);
 
     precedences
 }
@@ -440,7 +442,7 @@ fn parse_function_literal(parser: &mut Parser<'_>) -> Option<Expression> {
         return None;
     }
 
-    let arguments = match parse_arguments(parser) {
+    let parameters = match parse_parameters(parser) {
         Some(arguments) => arguments,
         None => return None,
     };
@@ -452,11 +454,11 @@ fn parse_function_literal(parser: &mut Parser<'_>) -> Option<Expression> {
     let body = parser.parse_block_statement();
 
     return Some(Expression::Function(FunctionLiteral::new(
-        token, arguments, body,
+        token, parameters, body,
     )));
 }
 
-fn parse_arguments(parser: &mut Parser<'_>) -> Option<Vec<Identifier>> {
+fn parse_parameters(parser: &mut Parser<'_>) -> Option<Vec<Identifier>> {
     let mut arguments = vec![];
 
     if parser.peek_token.kind == TokenType::RightParen {
@@ -480,6 +482,47 @@ fn parse_arguments(parser: &mut Parser<'_>) -> Option<Vec<Identifier>> {
             parser.current_token.lexeme.clone(),
         );
         arguments.push(identifier);
+    }
+
+    if !parser.expect_peek(TokenType::RightParen) {
+        return None;
+    }
+
+    return Some(arguments);
+}
+
+fn parse_call_expression(parser: &mut Parser<'_>, left: Expression) -> Option<Expression> {
+    let token = parser.current_token.clone();
+    match parse_arguments(parser) {
+        Some(arguments) => {
+            return Some(Expression::Call(CallExpression::new(
+                token, left, arguments,
+            )))
+        }
+        None => return None,
+    }
+}
+
+fn parse_arguments(parser: &mut Parser<'_>) -> Option<Vec<Expression>> {
+    let mut arguments = vec![];
+    if parser.peek_token.kind == TokenType::RightParen {
+        parser.next_token();
+        return Some(arguments);
+    }
+    parser.next_token();
+
+    match parser.parse_expression(Precedence::Lowest) {
+        Some(argument) => arguments.push(argument),
+        None => return None,
+    }
+
+    while parser.peek_token.kind == TokenType::Comma {
+        parser.next_token(); // Skip argument
+        parser.next_token(); // Skip comma
+        match parser.parse_expression(Precedence::Lowest) {
+            Some(argument) => arguments.push(argument),
+            None => return None,
+        }
     }
 
     if !parser.expect_peek(TokenType::RightParen) {
