@@ -14,6 +14,7 @@ pub enum Expression {
     Prefix(PrefixExpression),
     Infix(InfixExpression),
     If(IfExpression),
+    Function(FunctionLiteral),
 }
 
 impl Node for Expression {
@@ -25,6 +26,7 @@ impl Node for Expression {
             Expression::Prefix(prefix_expression) => prefix_expression.get_lexeme(),
             Expression::Infix(infinx_expression) => infinx_expression.get_lexeme(),
             Expression::If(if_expression) => if_expression.get_lexeme(),
+            Expression::Function(function_literal) => function_literal.get_lexeme(),
         }
     }
 
@@ -36,6 +38,7 @@ impl Node for Expression {
             Expression::Prefix(prefix_expression) => prefix_expression.to_string(),
             Expression::Infix(infinx_expression) => infinx_expression.to_string(),
             Expression::If(if_expression) => if_expression.to_string(),
+            Expression::Function(function_literal) => function_literal.to_string(),
         }
     }
 }
@@ -87,7 +90,8 @@ impl Node for ExpressionStatement {
             Expression::Boolean(boolean) => format!("{};", boolean.to_string()),
             Expression::Prefix(prefix_expression) => format!("{};", prefix_expression.to_string()),
             Expression::Infix(infix_expression) => format!("{};", infix_expression.to_string()),
-            Expression::If(if_expression) => if_expression.to_string(), // No ; for if expressions
+            Expression::If(if_expression) => if_expression.to_string(),
+            Expression::Function(function_literal) => function_literal.to_string(),
         }
     }
 }
@@ -399,6 +403,45 @@ impl IfExpression {
             condition: Box::new(condition),
             consequence,
             alternative,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct FunctionLiteral {
+    token: Token,
+    arguments: Vec<Identifier>,
+    body: BlockStatement,
+}
+
+impl Node for FunctionLiteral {
+    fn get_lexeme(&self) -> String {
+        self.token.lexeme.clone()
+    }
+
+    fn to_string(&self) -> String {
+        let arguments = self
+            .arguments
+            .iter()
+            .map(|argument| argument.to_string())
+            .collect::<Vec<String>>()
+            .join(", ");
+
+        format!(
+            "{}({}){{{}}}",
+            self.token.lexeme,
+            arguments,
+            self.body.to_string()
+        )
+    }
+}
+
+impl FunctionLiteral {
+    pub fn new(token: Token, arguments: Vec<Identifier>, body: BlockStatement) -> FunctionLiteral {
+        FunctionLiteral {
+            token,
+            arguments,
+            body,
         }
     }
 }

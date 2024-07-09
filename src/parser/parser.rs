@@ -6,8 +6,9 @@ use crate::lexer::{
 use crate::parser::ast::ast::Identifier;
 
 use super::ast::ast::{
-    BlockStatement, BooleanLiteral, Expression, ExpressionStatement, IfExpression, InfixExpression,
-    IntegerLiteral, LetStatement, PrefixExpression, Program, ReturnStatement, Statement,
+    BlockStatement, BooleanLiteral, Expression, ExpressionStatement, FunctionLiteral, IfExpression,
+    InfixExpression, IntegerLiteral, LetStatement, PrefixExpression, Program, ReturnStatement,
+    Statement,
 };
 use std::collections::HashMap;
 
@@ -59,6 +60,7 @@ impl<'a> Parser<'a> {
         parser.register_prefix(TokenType::Bang, parse_prefix_expression);
         parser.register_prefix(TokenType::LeftParen, parse_grouped_expression);
         parser.register_prefix(TokenType::If, parse_if_expression);
+        parser.register_prefix(TokenType::Function, parse_function_literal);
 
         parser.register_infix(TokenType::Plus, parse_infix_expression);
         parser.register_infix(TokenType::Minus, parse_infix_expression);
@@ -429,4 +431,60 @@ fn parse_if_expression(parser: &mut Parser<'_>) -> Option<Expression> {
         consequence,
         alternative,
     )));
+}
+
+fn parse_function_literal(parser: &mut Parser<'_>) -> Option<Expression> {
+    let token = parser.current_token.clone();
+
+    if !parser.expect_peek(TokenType::LeftParen) {
+        return None;
+    }
+
+    let arguments = match parse_arguments(parser) {
+        Some(arguments) => arguments,
+        None => return None,
+    };
+
+    if !parser.expect_peek(TokenType::LeftBrace) {
+        return None;
+    }
+
+    let body = parser.parse_block_statement();
+
+    return Some(Expression::Function(FunctionLiteral::new(
+        token, arguments, body,
+    )));
+}
+
+fn parse_arguments(parser: &mut Parser<'_>) -> Option<Vec<Identifier>> {
+    let mut arguments = vec![];
+
+    if parser.peek_token.kind == TokenType::RightParen {
+        parser.next_token();
+        return Some(arguments);
+    }
+    parser.next_token();
+
+    let identifier = Identifier::new(
+        parser.current_token.clone(),
+        parser.current_token.lexeme.clone(),
+    );
+
+    arguments.push(identifier);
+
+    while parser.peek_token.kind == TokenType::Comma {
+        parser.next_token(); // Skip identifier
+        parser.next_token(); // Skip comma
+        let identifier = Identifier::new(
+            parser.current_token.clone(),
+            parser.current_token.lexeme.clone(),
+        );
+        arguments.push(identifier);
+    }
+
+    if !parser.expect_peek(TokenType::RightParen) {
+        return None;
+    }
+
+    return Some(arguments);
 }
