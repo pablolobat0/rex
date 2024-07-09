@@ -291,7 +291,7 @@ mod tests {
             check_parser_errors(&parser);
 
             let actual = program.to_string();
-            assert_eq!(actual, expected, "input: {}", input);
+            check_parse_expression_statement(&actual, expected);
         }
     }
 
@@ -307,7 +307,7 @@ mod tests {
         }
         "#;
         let expected = "if (x < y) { let a = 5;\na; } else { let b = 10;\nb; }";
-        check_parse_if_expression(input, expected);
+        check_parse_expression_statement(input, expected);
     }
 
     #[test]
@@ -319,15 +319,37 @@ mod tests {
         }
         "#;
         let expected = "if (x < y) { let a = 5;\na; }";
-        check_parse_if_expression(input, expected);
+        check_parse_expression_statement(input, expected);
     }
-    fn check_parse_if_expression(input: &str, expected: &str) {
+
+    fn check_parse_expression_statement(input: &str, expected: &str) {
         let lexer = Lexer::new(input);
         let mut parser = Parser::new(lexer);
         let program = parser.parse_program();
+
         check_parser_errors(&parser);
 
-        assert_eq!(parser.errors.len(), 0, "Parser errors: {:?}", parser.errors);
         assert_eq!(program.to_string(), expected, "input: {}", input);
+    }
+
+    #[test]
+    fn test_function_literal() {
+        let input = "fn(x, y) { return 1; }";
+        let expected = "fn(x, y){return 1;}";
+        check_parse_expression_statement(input, expected);
+    }
+
+    #[test]
+    fn test_function_literal_no_arguments() {
+        let input = "fn() { return 1; }";
+        let expected = "fn(){return 1;}";
+        check_parse_expression_statement(input, expected);
+    }
+
+    #[test]
+    fn test_function_literal_with_multiple_statements() {
+        let input = "fn(x) { let y = x + 1; return y; }";
+        let expected = "fn(x){let y = (x + 1);\nreturn y;}";
+        check_parse_expression_statement(input, expected);
     }
 }
