@@ -1,4 +1,7 @@
-use crate::lexer::{lexer::Lexer, token::token::TokenType};
+use crate::{
+    lexer::lexer::Lexer,
+    parser::{ast::ast::Node, parser::Parser},
+};
 use std::io::{self, Write};
 
 const PROMPT: &str = "> ";
@@ -14,16 +17,25 @@ pub fn start() {
             .expect("Error al leer la línea");
 
         let input = input.trim();
-        let mut lexer = Lexer::new(input);
+        let lexer = Lexer::new(input);
+        let mut parser = Parser::new(lexer);
 
-        loop {
-            let token = lexer.next_token();
-            if token.kind == TokenType::EOF {
-                break;
-            } else if token.lexeme == "exit" {
-                return;
-            }
-            println!("{:?}", token);
+        let program = parser.parse_program();
+
+        if parser.get_errors().len() != 0 {
+            print_parser_errors(parser.get_errors());
+            continue;
         }
+
+        if program.get_lexeme() == "exit" {
+            return;
+        }
+        println!("{}", program.to_string());
+    }
+}
+
+fn print_parser_errors(errors: Vec<String>) {
+    for error in errors {
+        println!("{}", error);
     }
 }

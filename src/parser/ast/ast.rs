@@ -161,7 +161,7 @@ impl Program {
 
 impl Node for Program {
     fn get_lexeme(&self) -> String {
-        if self.statements.len() > 1 {
+        if self.statements.len() > 0 {
             return self.statements[0].get_lexeme();
         } else {
             return "".to_string();
