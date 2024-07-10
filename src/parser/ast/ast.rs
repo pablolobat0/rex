@@ -1,8 +1,23 @@
 use crate::lexer::token::token::Token;
 
-pub trait Node {
-    fn get_lexeme(&self) -> String;
-    fn to_string(&self) -> String;
+pub enum Node {
+    Expression(Expression),
+    Statement(Statement),
+}
+
+impl Node {
+    pub fn get_lexeme(&self) -> String {
+        match self {
+            Node::Expression(expression) => expression.get_lexeme(),
+            Node::Statement(statement) => statement.get_lexeme(),
+        }
+    }
+    pub fn to_string(&self) -> String {
+        match self {
+            Node::Expression(expression) => expression.to_string(),
+            Node::Statement(statement) => statement.to_string(),
+        }
+    }
 }
 
 // An expression computes a value
@@ -18,8 +33,8 @@ pub enum Expression {
     Call(CallExpression),
 }
 
-impl Node for Expression {
-    fn get_lexeme(&self) -> String {
+impl Expression {
+    pub fn get_lexeme(&self) -> String {
         match self {
             Expression::Identifier(identifier) => identifier.get_lexeme(),
             Expression::Integer(integer) => integer.get_lexeme(),
@@ -32,7 +47,7 @@ impl Node for Expression {
         }
     }
 
-    fn to_string(&self) -> String {
+    pub fn to_string(&self) -> String {
         match self {
             Expression::Identifier(identifier) => identifier.to_string(),
             Expression::Integer(integer) => integer.to_string(),
@@ -55,8 +70,8 @@ pub enum Statement {
     Block(BlockStatement),
 }
 
-impl Node for Statement {
-    fn get_lexeme(&self) -> String {
+impl Statement {
+    pub fn get_lexeme(&self) -> String {
         match self {
             Statement::Let(statement) => statement.get_lexeme(),
             Statement::Return(statement) => statement.get_lexeme(),
@@ -65,7 +80,7 @@ impl Node for Statement {
         }
     }
 
-    fn to_string(&self) -> String {
+    pub fn to_string(&self) -> String {
         match self {
             Statement::Let(statement) => statement.to_string(),
             Statement::Return(statement) => statement.to_string(),
@@ -81,12 +96,12 @@ pub struct ExpressionStatement {
     pub expression: Expression,
 }
 
-impl Node for ExpressionStatement {
-    fn get_lexeme(&self) -> String {
+impl ExpressionStatement {
+    pub fn get_lexeme(&self) -> String {
         self.token.lexeme.clone()
     }
 
-    fn to_string(&self) -> String {
+    pub fn to_string(&self) -> String {
         match &self.expression {
             Expression::Identifier(identifier) => format!("{};", identifier.to_string()),
             Expression::Integer(integer) => format!("{};", integer.to_string()),
@@ -98,9 +113,7 @@ impl Node for ExpressionStatement {
             Expression::Call(call_expression) => format!("{};", call_expression.to_string()),
         }
     }
-}
 
-impl ExpressionStatement {
     pub fn new(token: Token, expression: Expression) -> ExpressionStatement {
         ExpressionStatement { token, expression }
     }
@@ -112,8 +125,8 @@ pub struct BlockStatement {
     statements: Vec<Statement>,
 }
 
-impl Node for BlockStatement {
-    fn get_lexeme(&self) -> String {
+impl BlockStatement {
+    pub fn get_lexeme(&self) -> String {
         if self.statements.len() > 1 {
             return self.statements[0].get_lexeme();
         } else {
@@ -121,16 +134,14 @@ impl Node for BlockStatement {
         }
     }
 
-    fn to_string(&self) -> String {
+    pub fn to_string(&self) -> String {
         self.statements
             .iter()
             .map(|statement| statement.to_string())
             .collect::<Vec<String>>()
             .join("\n")
     }
-}
 
-impl BlockStatement {
     pub fn new(token: Token) -> BlockStatement {
         BlockStatement {
             token,
@@ -157,10 +168,8 @@ impl Program {
     pub fn add_statement(&mut self, statement: Statement) {
         self.statements.push(statement);
     }
-}
 
-impl Node for Program {
-    fn get_lexeme(&self) -> String {
+    pub fn get_lexeme(&self) -> String {
         if self.statements.len() > 0 {
             return self.statements[0].get_lexeme();
         } else {
@@ -168,7 +177,7 @@ impl Node for Program {
         }
     }
 
-    fn to_string(&self) -> String {
+    pub fn to_string(&self) -> String {
         self.statements
             .iter()
             .map(|statement| statement.to_string())
@@ -192,14 +201,12 @@ impl LetStatement {
             value,
         }
     }
-}
 
-impl Node for LetStatement {
-    fn get_lexeme(&self) -> String {
+    pub fn get_lexeme(&self) -> String {
         self.token.lexeme.clone()
     }
 
-    fn to_string(&self) -> String {
+    pub fn to_string(&self) -> String {
         format!(
             "{} {} = {};",
             self.token.lexeme,
@@ -219,14 +226,12 @@ impl Identifier {
     pub fn new(token: Token, name: String) -> Identifier {
         Identifier { token, name }
     }
-}
 
-impl Node for Identifier {
-    fn get_lexeme(&self) -> String {
+    pub fn get_lexeme(&self) -> String {
         return self.token.lexeme.clone();
     }
 
-    fn to_string(&self) -> String {
+    pub fn to_string(&self) -> String {
         self.name.clone()
     }
 }
@@ -237,17 +242,14 @@ pub struct ReturnStatement {
     pub value: Expression,
 }
 
-impl Node for ReturnStatement {
+impl ReturnStatement {
     fn get_lexeme(&self) -> String {
         self.token.lexeme.clone()
     }
 
-    fn to_string(&self) -> String {
+    pub fn to_string(&self) -> String {
         format!("{} {};", self.token.lexeme.clone(), self.value.to_string())
     }
-}
-
-impl ReturnStatement {
     pub fn new(token: Token, value: Expression) -> ReturnStatement {
         ReturnStatement { token, value }
     }
@@ -259,17 +261,14 @@ pub struct IntegerLiteral {
     pub value: i64,
 }
 
-impl Node for IntegerLiteral {
-    fn get_lexeme(&self) -> String {
-        self.token.lexeme.clone()
-    }
-
-    fn to_string(&self) -> String {
-        self.token.lexeme.clone()
-    }
-}
-
 impl IntegerLiteral {
+    pub fn get_lexeme(&self) -> String {
+        self.token.lexeme.clone()
+    }
+
+    pub fn to_string(&self) -> String {
+        self.token.lexeme.clone()
+    }
     pub fn new(token: Token, value: i64) -> IntegerLiteral {
         IntegerLiteral { token, value }
     }
@@ -281,17 +280,14 @@ pub struct BooleanLiteral {
     pub value: bool,
 }
 
-impl Node for BooleanLiteral {
-    fn get_lexeme(&self) -> String {
-        self.token.lexeme.clone()
-    }
-
-    fn to_string(&self) -> String {
-        self.token.lexeme.clone()
-    }
-}
-
 impl BooleanLiteral {
+    pub fn get_lexeme(&self) -> String {
+        self.token.lexeme.clone()
+    }
+
+    pub fn to_string(&self) -> String {
+        self.token.lexeme.clone()
+    }
     pub fn new(token: Token, value: bool) -> BooleanLiteral {
         BooleanLiteral { token, value }
     }
@@ -304,7 +300,7 @@ pub struct PrefixExpression {
     pub right: Box<Expression>,
 }
 
-impl Node for PrefixExpression {
+impl PrefixExpression {
     fn get_lexeme(&self) -> String {
         self.token.lexeme.clone()
     }
@@ -312,9 +308,6 @@ impl Node for PrefixExpression {
     fn to_string(&self) -> String {
         format!("({}{})", self.operator, self.right.to_string())
     }
-}
-
-impl PrefixExpression {
     pub fn new(token: Token, operator: String, right: Expression) -> PrefixExpression {
         PrefixExpression {
             token,
@@ -332,12 +325,12 @@ pub struct InfixExpression {
     pub right: Box<Expression>,
 }
 
-impl Node for InfixExpression {
-    fn get_lexeme(&self) -> String {
+impl InfixExpression {
+    pub fn get_lexeme(&self) -> String {
         self.token.lexeme.clone()
     }
 
-    fn to_string(&self) -> String {
+    pub fn to_string(&self) -> String {
         format!(
             "({} {} {})",
             self.left.to_string(),
@@ -345,9 +338,6 @@ impl Node for InfixExpression {
             self.right.to_string()
         )
     }
-}
-
-impl InfixExpression {
     pub fn new(
         token: Token,
         left: Expression,
@@ -371,12 +361,12 @@ pub struct IfExpression {
     alternative: Option<BlockStatement>,
 }
 
-impl Node for IfExpression {
-    fn get_lexeme(&self) -> String {
+impl IfExpression {
+    pub fn get_lexeme(&self) -> String {
         self.token.lexeme.clone()
     }
 
-    fn to_string(&self) -> String {
+    pub fn to_string(&self) -> String {
         let condition_str = self.condition.to_string();
         let consequence_str = self.consequence.to_string();
         let alternative_str = match &self.alternative {
@@ -393,9 +383,6 @@ impl Node for IfExpression {
             format!("if {} {{ {} }}", condition_str, consequence_str)
         }
     }
-}
-
-impl IfExpression {
     pub fn new(
         token: Token,
         condition: Expression,
@@ -418,12 +405,12 @@ pub struct FunctionLiteral {
     body: BlockStatement,
 }
 
-impl Node for FunctionLiteral {
-    fn get_lexeme(&self) -> String {
+impl FunctionLiteral {
+    pub fn get_lexeme(&self) -> String {
         self.token.lexeme.clone()
     }
 
-    fn to_string(&self) -> String {
+    pub fn to_string(&self) -> String {
         let arguments = self
             .arguments
             .iter()
@@ -438,9 +425,6 @@ impl Node for FunctionLiteral {
             self.body.to_string()
         )
     }
-}
-
-impl FunctionLiteral {
     pub fn new(token: Token, arguments: Vec<Identifier>, body: BlockStatement) -> FunctionLiteral {
         FunctionLiteral {
             token,
@@ -457,12 +441,12 @@ pub struct CallExpression {
     arguments: Vec<Expression>,
 }
 
-impl Node for CallExpression {
-    fn get_lexeme(&self) -> String {
+impl CallExpression {
+    pub fn get_lexeme(&self) -> String {
         self.token.lexeme.clone()
     }
 
-    fn to_string(&self) -> String {
+    pub fn to_string(&self) -> String {
         let argumets = self
             .arguments
             .iter()
@@ -472,9 +456,7 @@ impl Node for CallExpression {
 
         format!("{}({})", self.function.to_string(), argumets)
     }
-}
 
-impl CallExpression {
     pub fn new(token: Token, function: Expression, arguments: Vec<Expression>) -> CallExpression {
         CallExpression {
             token,

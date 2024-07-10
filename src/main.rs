@@ -1,6 +1,7 @@
 use repl::start;
 use std::env;
 
+mod evaluator;
 mod lexer;
 mod parser;
 mod repl;
