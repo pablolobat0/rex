@@ -3,6 +3,7 @@ use crate::lexer::token::token::Token;
 pub enum Node {
     Expression(Expression),
     Statement(Statement),
+    Program(Program),
 }
 
 impl Node {
@@ -10,12 +11,14 @@ impl Node {
         match self {
             Node::Expression(expression) => expression.get_lexeme(),
             Node::Statement(statement) => statement.get_lexeme(),
+            Node::Program(program) => program.get_lexeme(),
         }
     }
     pub fn to_string(&self) -> String {
         match self {
             Node::Expression(expression) => expression.to_string(),
             Node::Statement(statement) => statement.to_string(),
+            Node::Program(program) => program.to_string(),
         }
     }
 }

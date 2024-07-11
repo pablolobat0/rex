@@ -1,4 +1,5 @@
 use crate::{
+    evaluator::evaluator::eval,
     lexer::lexer::Lexer,
     parser::{ast::ast::Node, parser::Parser},
 };
@@ -30,7 +31,7 @@ pub fn start() {
         if program.get_lexeme() == "exit" {
             return;
         }
-        println!("{}", program.to_string());
+        println!("{}", eval(Node::Program(program)).to_string());
     }
 }
 

@@ -110,7 +110,7 @@ impl<'a> Parser<'a> {
 
         while self.current_token.kind != TokenType::EOF {
             if let Some(statement) = self.parse_statement() {
-                program.statements.push(statement);
+                program.add_statement(statement);
             }
             self.next_token();
         }
