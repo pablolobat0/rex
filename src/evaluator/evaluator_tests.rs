@@ -44,4 +44,36 @@ mod test {
             assert_eq!(result, Object::Integer(expected));
         }
     }
+    #[test]
+    fn test_eval_integer_infix_expressions() {
+        let test = vec![
+            ("10-5;", 5),
+            ("77+70;", 147),
+            ("20*20", 400),
+            ("100/10", 10),
+        ];
+        for (input, expected) in test {
+            let result = test_eval(input);
+            assert_eq!(result, Object::Integer(expected));
+        }
+        let test = vec![
+            ("10==5;", false),
+            ("10==10;", true),
+            ("77!=80;", true),
+            ("77!=77;", false),
+            ("21>20", true),
+            ("21>22", false),
+            ("21>=21", true),
+            ("21>=22", false),
+            ("19<20", true),
+            ("21<20", false),
+            ("20<=20", true),
+            ("21<=20", false),
+            ("21>20", true),
+        ];
+        for (input, expected) in test {
+            let result = test_eval(input);
+            assert_eq!(result, Object::Boolean(expected));
+        }
+    }
 }
