@@ -76,4 +76,19 @@ mod test {
             assert_eq!(result, Object::Boolean(expected));
         }
     }
+    #[test]
+    fn test_eval_boolean_infix_expressions() {
+        let test = vec![
+            ("false==true;", false),
+            ("true==true;", true),
+            ("false==false;", true),
+            ("true!=false;", true),
+            ("true!=true;", false),
+            ("false!=false", false),
+        ];
+        for (input, expected) in test {
+            let result = test_eval(input);
+            assert_eq!(result, Object::Boolean(expected));
+        }
+    }
 }
