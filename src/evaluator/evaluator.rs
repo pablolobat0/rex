@@ -73,6 +73,9 @@ fn eval_infix_expression(left: Object, operator: &str, right: Object) -> Object 
         (Object::Integer(left_value), _, Object::Integer(right_value)) => {
             eval_integer_infix_expression(left_value, operator, right_value)
         }
+        (Object::Boolean(left_value), _, Object::Boolean(right_value)) => {
+            eval_boolean_infix_expression(left_value, operator, right_value)
+        }
         _ => NULL,
     }
 }
@@ -99,6 +102,13 @@ fn eval_integer_infix_expression(left_value: i64, operator: &str, right_value: i
     }
 }
 
+fn eval_boolean_infix_expression(left_value: bool, operator: &str, right_value: bool) -> Object {
+    match operator {
+        "==" => eval_boolean(left_value == right_value),
+        "!=" => eval_boolean(left_value != right_value),
+        _ => NULL,
+    }
+}
 fn eval_statement(statement: Statement) -> Object {
     match statement {
         Statement::Expression(expression_statement) => {
