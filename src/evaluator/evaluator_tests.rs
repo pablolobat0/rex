@@ -20,16 +20,28 @@ mod test {
     }
 
     #[test]
-    fn test_eval_boolean_literal_true() {
-        let input = "true;";
-        let result = test_eval(input);
-        assert_eq!(result, Object::Boolean(true));
+    fn test_eval_boolean_literal() {
+        let test = vec![("true;", true), ("false;", false)];
+        for (input, expected) in test {
+            let result = test_eval(input);
+            assert_eq!(result, Object::Boolean(expected));
+        }
     }
 
     #[test]
-    fn test_eval_boolean_literal_false() {
-        let input = "false;";
-        let result = test_eval(input);
-        assert_eq!(result, Object::Boolean(false));
+    fn test_eval_bang_prefix_expression() {
+        let test = vec![("!true;", false), ("!false;", true)];
+        for (input, expected) in test {
+            let result = test_eval(input);
+            assert_eq!(result, Object::Boolean(expected));
+        }
+    }
+    #[test]
+    fn test_eval_minus_prefix_expression() {
+        let test = vec![("-5;", -5), ("-77;", -77)];
+        for (input, expected) in test {
+            let result = test_eval(input);
+            assert_eq!(result, Object::Integer(expected));
+        }
     }
 }
