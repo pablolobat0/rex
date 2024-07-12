@@ -29,6 +29,11 @@ fn eval_expression(expression: Expression) -> Object {
             let right = eval(Node::Expression(*prefix_expression.right));
             return eval_prefix_expression(&prefix_expression.operator, right);
         }
+        Expression::Infix(infix_expression) => {
+            let right = eval(Node::Expression(*infix_expression.right));
+            let left = eval(Node::Expression(*infix_expression.left));
+            return eval_infix_expression(left, &infix_expression.operator, right);
+        }
         _ => todo!(),
     }
 }
@@ -59,6 +64,37 @@ fn eval_bang_operator(object: Object) -> Object {
 fn eval_minus_prefix_operator(object: Object) -> Object {
     match object {
         Object::Integer(value) => Object::Integer(-value),
+        _ => NULL,
+    }
+}
+
+fn eval_infix_expression(left: Object, operator: &str, right: Object) -> Object {
+    match (left, operator, right) {
+        (Object::Integer(left_value), _, Object::Integer(right_value)) => {
+            eval_integer_infix_expression(left_value, operator, right_value)
+        }
+        _ => NULL,
+    }
+}
+
+fn eval_integer_infix_expression(left_value: i64, operator: &str, right_value: i64) -> Object {
+    match operator {
+        "+" => Object::Integer(left_value + right_value),
+        "-" => Object::Integer(left_value - right_value),
+        "*" => Object::Integer(left_value * right_value),
+        "/" => {
+            if right_value != 0 {
+                Object::Integer(left_value / right_value)
+            } else {
+                NULL
+            }
+        }
+        "==" => eval_boolean(left_value == right_value),
+        "!=" => eval_boolean(left_value != right_value),
+        ">" => eval_boolean(left_value > right_value),
+        ">=" => eval_boolean(left_value >= right_value),
+        "<" => eval_boolean(left_value < right_value),
+        "<=" => eval_boolean(left_value <= right_value),
         _ => NULL,
     }
 }
