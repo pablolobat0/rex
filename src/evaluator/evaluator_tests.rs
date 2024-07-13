@@ -91,4 +91,25 @@ mod test {
             assert_eq!(result, Object::Boolean(expected));
         }
     }
+
+    #[test]
+    fn test_eval_if_expression_true_condition() {
+        let input = "if (true) { 10 } else { 20 };";
+        let result = test_eval(input);
+        assert_eq!(result, Object::Integer(10));
+    }
+
+    #[test]
+    fn test_eval_if_expression_false_condition() {
+        let input = "if (false) { 10 } else { 20 };";
+        let result = test_eval(input);
+        assert_eq!(result, Object::Integer(20));
+    }
+
+    #[test]
+    fn test_eval_if_expression_no_alternative() {
+        let input = "if (false) { 10 };";
+        let result = test_eval(input);
+        assert_eq!(result, Object::Null);
+    }
 }
