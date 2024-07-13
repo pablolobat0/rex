@@ -125,7 +125,7 @@ impl ExpressionStatement {
 #[derive(Debug)]
 pub struct BlockStatement {
     token: Token,
-    statements: Vec<Statement>,
+    pub statements: Vec<Statement>,
 }
 
 impl BlockStatement {
@@ -359,9 +359,9 @@ impl InfixExpression {
 #[derive(Debug)]
 pub struct IfExpression {
     token: Token,
-    condition: Box<Expression>,
-    consequence: BlockStatement,
-    alternative: Option<BlockStatement>,
+    pub condition: Box<Expression>,
+    pub consequence: BlockStatement,
+    pub alternative: Option<BlockStatement>,
 }
 
 impl IfExpression {

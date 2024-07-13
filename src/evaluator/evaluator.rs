@@ -1,5 +1,5 @@
 use super::object::object::Object;
-use crate::parser::ast::ast::{Expression, Node, Statement};
+use crate::parser::ast::ast::{Expression, IfExpression, Node, Statement};
 
 const TRUE: Object = Object::Boolean(true);
 const FALSE: Object = Object::Boolean(false);
@@ -34,6 +34,7 @@ fn eval_expression(expression: Expression) -> Object {
             let left = eval(Node::Expression(*infix_expression.left));
             return eval_infix_expression(left, &infix_expression.operator, right);
         }
+        Expression::If(if_expression) => eval_if_expression(if_expression),
         _ => todo!(),
     }
 }
@@ -109,11 +110,32 @@ fn eval_boolean_infix_expression(left_value: bool, operator: &str, right_value: 
         _ => NULL,
     }
 }
+
+fn eval_if_expression(node: IfExpression) -> Object {
+    let condition = eval(Node::Expression(*node.condition));
+    if is_truthy(&condition) {
+        eval(Node::Statement(Statement::Block(node.consequence)))
+    } else if let Some(alternative) = node.alternative {
+        eval(Node::Statement(Statement::Block(alternative)))
+    } else {
+        NULL
+    }
+}
+
+fn is_truthy(object: &Object) -> bool {
+    match object {
+        Object::Boolean(value) => *value,
+        Object::Null => false,
+        _ => true,
+    }
+}
+
 fn eval_statement(statement: Statement) -> Object {
     match statement {
         Statement::Expression(expression_statement) => {
             return eval(Node::Expression(expression_statement.expression))
         }
+        Statement::Block(block_statement) => eval_statements(block_statement.statements),
         _ => todo!(),
     }
 }
