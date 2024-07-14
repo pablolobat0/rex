@@ -7,16 +7,20 @@ const NULL: Object = Object::Null;
 
 pub fn eval(node: Node) -> Object {
     match node {
-        Node::Program(program) => eval_statements(program.statements),
+        Node::Program(program) => eval_program_statements(program.statements),
         Node::Expression(expression) => eval_expression(expression),
         Node::Statement(statement) => eval_statement(statement),
     }
 }
 
-fn eval_statements(statements: Vec<Statement>) -> Object {
+fn eval_program_statements(statements: Vec<Statement>) -> Object {
     let mut result = NULL;
     for statement in statements {
         result = eval(Node::Statement(statement));
+        match result {
+            Object::Return(return_value) => return *return_value,
+            _ => continue,
+        }
     }
     result
 }
@@ -139,7 +143,19 @@ fn eval_statement(statement: Statement) -> Object {
             let return_value = eval(Node::Expression(return_statement.value));
             Object::Return(Box::new(return_value))
         }
-        Statement::Block(block_statement) => eval_statements(block_statement.statements),
+        Statement::Block(block_statement) => eval_block_statements(block_statement.statements),
         _ => todo!(),
     }
+}
+
+fn eval_block_statements(statements: Vec<Statement>) -> Object {
+    let mut result = NULL;
+    for statement in statements {
+        result = eval(Node::Statement(statement));
+        match result {
+            Object::Return(_) => return result,
+            _ => continue,
+        }
+    }
+    result
 }
