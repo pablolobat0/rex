@@ -135,6 +135,10 @@ fn eval_statement(statement: Statement) -> Object {
         Statement::Expression(expression_statement) => {
             return eval(Node::Expression(expression_statement.expression))
         }
+        Statement::Return(return_statement) => {
+            let return_value = eval(Node::Expression(return_statement.value));
+            Object::Return(Box::new(return_value))
+        }
         Statement::Block(block_statement) => eval_statements(block_statement.statements),
         _ => todo!(),
     }
