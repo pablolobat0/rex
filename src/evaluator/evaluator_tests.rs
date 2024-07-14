@@ -112,4 +112,21 @@ mod test {
         let result = test_eval(input);
         assert_eq!(result, Object::Null);
     }
+    #[test]
+    fn test_eval_return() {
+        let input = "return 10;";
+        let result = test_eval(input);
+        assert_eq!(result, Object::Integer(10));
+    }
+    #[test]
+    fn test_eval_multiple_return() {
+        let input = "if 10 > 1 {
+                        if 10 > 1 {
+                            return 10; 
+                        }
+                        return 1;
+                        }";
+        let result = test_eval(input);
+        assert_eq!(result, Object::Integer(10));
+    }
 }
