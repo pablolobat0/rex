@@ -1,6 +1,9 @@
 mod test {
     use crate::{
-        evaluator::{evaluator::eval, object::object::Object},
+        evaluator::{
+            evaluator::eval,
+            object::object::{Environment, Object},
+        },
         lexer::lexer::Lexer,
         parser::{ast::ast::Node, parser::Parser},
     };
@@ -10,7 +13,9 @@ mod test {
         let mut parser = Parser::new(lexer);
         let program = parser.parse_program();
 
-        return eval(Node::Program(program));
+        let mut environment = Environment::new();
+
+        return eval(Node::Program(program), &mut environment);
     }
     #[test]
     fn test_eval_integer_literal() {
@@ -165,5 +170,45 @@ mod test {
             result,
             Object::Error("type mismatch, expected a BOOLEAN but found INTEGER".to_string())
         );
+    }
+    #[test]
+    fn test_identifier_expression() {
+        let input = "let x = 5; x;";
+        let result = test_eval(input);
+        assert_eq!(result, Object::Integer(5));
+
+        let input = "let x = 5; let y = x; y;";
+        let result = test_eval(input);
+        assert_eq!(result, Object::Integer(5));
+
+        let input = "let x = 5; let y = x; let z = x + y + 5; z;";
+        let result = test_eval(input);
+        assert_eq!(result, Object::Integer(15));
+    }
+
+    #[test]
+    fn test_let_statements() {
+        let input = "let x = 5; x;";
+        let result = test_eval(input);
+        assert_eq!(result, Object::Integer(5));
+
+        let input = "let x = 5 * 5; x;";
+        let result = test_eval(input);
+        assert_eq!(result, Object::Integer(25));
+
+        let input = "let a = 5; let b = a; b;";
+        let result = test_eval(input);
+        assert_eq!(result, Object::Integer(5));
+
+        let input = "let a = 5; let b = a; let c = a + b + 5; c;";
+        let result = test_eval(input);
+        assert_eq!(result, Object::Integer(15));
+    }
+
+    #[test]
+    fn test_identifier_not_found() {
+        let input = "x;";
+        let result = test_eval(input);
+        assert_eq!(result, Object::Error("identifier not found: x".to_string()));
     }
 }
