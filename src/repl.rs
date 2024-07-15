@@ -1,5 +1,5 @@
 use crate::{
-    evaluator::evaluator::eval,
+    evaluator::{evaluator::eval, object::object::Environment},
     lexer::lexer::Lexer,
     parser::{ast::ast::Node, parser::Parser},
 };
@@ -8,6 +8,7 @@ use std::io::{self, Write};
 const PROMPT: &str = "> ";
 
 pub fn start() {
+    let mut environment = Environment::new();
     loop {
         let mut input = String::new();
         print!("{}", PROMPT);
@@ -31,7 +32,10 @@ pub fn start() {
         if program.get_lexeme() == "exit" {
             return;
         }
-        println!("{}", eval(Node::Program(program)).to_string());
+        println!(
+            "{}",
+            eval(Node::Program(program), &mut environment).to_string()
+        );
     }
 }
 

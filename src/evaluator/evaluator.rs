@@ -1,22 +1,22 @@
-use super::object::object::Object;
-use crate::parser::ast::ast::{Expression, IfExpression, Node, Statement};
+use super::object::object::{Environment, Object};
+use crate::parser::ast::ast::{Expression, Identifier, IfExpression, Node, Statement};
 
 const TRUE: Object = Object::Boolean(true);
 const FALSE: Object = Object::Boolean(false);
 const NULL: Object = Object::Null;
 
-pub fn eval(node: Node) -> Object {
+pub fn eval(node: Node, environment: &mut Environment) -> Object {
     match node {
-        Node::Program(program) => eval_program_statements(program.statements),
-        Node::Expression(expression) => eval_expression(expression),
-        Node::Statement(statement) => eval_statement(statement),
+        Node::Program(program) => eval_program_statements(program.statements, environment),
+        Node::Expression(expression) => eval_expression(expression, environment),
+        Node::Statement(statement) => eval_statement(statement, environment),
     }
 }
 
-fn eval_program_statements(statements: Vec<Statement>) -> Object {
+fn eval_program_statements(statements: Vec<Statement>, environment: &mut Environment) -> Object {
     let mut result = NULL;
     for statement in statements {
-        result = eval(Node::Statement(statement));
+        result = eval(Node::Statement(statement), environment);
         match result {
             Object::Return(return_value) => return *return_value,
             Object::Error(_) => return result,
@@ -26,12 +26,13 @@ fn eval_program_statements(statements: Vec<Statement>) -> Object {
     result
 }
 
-fn eval_expression(expression: Expression) -> Object {
+fn eval_expression(expression: Expression, environment: &mut Environment) -> Object {
     match expression {
         Expression::Integer(integer) => Object::Integer(integer.value),
+        Expression::Identifier(identifier) => eval_identifier(identifier, environment),
         Expression::Boolean(boolean) => eval_boolean(boolean.value),
         Expression::Prefix(prefix_expression) => {
-            let right = eval(Node::Expression(*prefix_expression.right));
+            let right = eval(Node::Expression(*prefix_expression.right), environment);
             if is_error(&right) {
                 return right;
             }
@@ -39,18 +40,27 @@ fn eval_expression(expression: Expression) -> Object {
             return eval_prefix_expression(&prefix_expression.operator, right);
         }
         Expression::Infix(infix_expression) => {
-            let right = eval(Node::Expression(*infix_expression.right));
+            let right = eval(Node::Expression(*infix_expression.right), environment);
             if is_error(&right) {
                 return right;
             }
-            let left = eval(Node::Expression(*infix_expression.left));
+            let left = eval(Node::Expression(*infix_expression.left), environment);
             if is_error(&left) {
                 return left;
             }
             return eval_infix_expression(left, &infix_expression.operator, right);
         }
-        Expression::If(if_expression) => eval_if_expression(if_expression),
+        Expression::If(if_expression) => eval_if_expression(if_expression, environment),
         _ => Object::Error(format!("unkown expression: {}", expression.to_string())),
+    }
+}
+
+fn eval_identifier(identifier: Identifier, environment: &mut Environment) -> Object {
+    let object = environment.get(&identifier.name);
+
+    match object {
+        Some(object) => object.clone(),
+        None => Object::Error(format!("identifier not found: {}", identifier.name)),
     }
 }
 
@@ -141,8 +151,8 @@ fn eval_boolean_infix_expression(left_value: bool, operator: &str, right_value: 
     }
 }
 
-fn eval_if_expression(node: IfExpression) -> Object {
-    let condition = eval(Node::Expression(*node.condition));
+fn eval_if_expression(node: IfExpression, environment: &mut Environment) -> Object {
+    let condition = eval(Node::Expression(*node.condition), environment);
     match condition {
         Object::Boolean(_) => {}
         _ => {
@@ -153,9 +163,12 @@ fn eval_if_expression(node: IfExpression) -> Object {
         }
     }
     if is_truthy(&condition) {
-        eval(Node::Statement(Statement::Block(node.consequence)))
+        eval(
+            Node::Statement(Statement::Block(node.consequence)),
+            environment,
+        )
     } else if let Some(alternative) = node.alternative {
-        eval(Node::Statement(Statement::Block(alternative)))
+        eval(Node::Statement(Statement::Block(alternative)), environment)
     } else {
         NULL
     }
@@ -169,24 +182,37 @@ fn is_truthy(object: &Object) -> bool {
     }
 }
 
-fn eval_statement(statement: Statement) -> Object {
+fn eval_statement(statement: Statement, environment: &mut Environment) -> Object {
     match statement {
         Statement::Expression(expression_statement) => {
-            return eval(Node::Expression(expression_statement.expression))
+            return eval(
+                Node::Expression(expression_statement.expression),
+                environment,
+            )
         }
         Statement::Return(return_statement) => {
-            let return_value = eval(Node::Expression(return_statement.value));
+            let return_value = eval(Node::Expression(return_statement.value), environment);
             Object::Return(Box::new(return_value))
         }
-        Statement::Block(block_statement) => eval_block_statements(block_statement.statements),
-        _ => todo!(),
+        Statement::Let(let_statement) => {
+            let value = eval(Node::Expression(let_statement.value), environment);
+            if is_error(&value) {
+                return value;
+            }
+
+            environment.set(&let_statement.identifier.name, value.clone());
+            value
+        }
+        Statement::Block(block_statement) => {
+            eval_block_statements(block_statement.statements, environment)
+        }
     }
 }
 
-fn eval_block_statements(statements: Vec<Statement>) -> Object {
+fn eval_block_statements(statements: Vec<Statement>, environment: &mut Environment) -> Object {
     let mut result = NULL;
     for statement in statements {
-        result = eval(Node::Statement(statement));
+        result = eval(Node::Statement(statement), environment);
         match result {
             Object::Return(_) => return result,
             Object::Error(_) => return result,
