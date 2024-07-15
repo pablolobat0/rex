@@ -129,4 +129,41 @@ mod test {
         let result = test_eval(input);
         assert_eq!(result, Object::Integer(10));
     }
+
+    #[test]
+    fn test_unknown_prefix_operator() {
+        let input = "-true;";
+        let result = test_eval(input);
+        assert_eq!(
+            result,
+            Object::Error("type mismatch, expected an INTEGER but found BOOLEAN".to_string())
+        );
+    }
+
+    #[test]
+    fn test_type_mismatch_infix() {
+        let input = "5 + true;";
+        let result = test_eval(input);
+        assert_eq!(
+            result,
+            Object::Error("type mismatch: INTEGER + BOOLEAN".to_string())
+        );
+    }
+
+    #[test]
+    fn test_division_by_zero() {
+        let input = "5 / 0;";
+        let result = test_eval(input);
+        assert_eq!(result, Object::Error("error division by 0".to_string()));
+    }
+
+    #[test]
+    fn test_if_expression_with_non_boolean_condition() {
+        let input = "if (5) { 10 } else { 20 };";
+        let result = test_eval(input);
+        assert_eq!(
+            result,
+            Object::Error("type mismatch, expected a BOOLEAN but found INTEGER".to_string())
+        );
+    }
 }
