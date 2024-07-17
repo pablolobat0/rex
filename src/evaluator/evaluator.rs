@@ -1,4 +1,6 @@
-use super::object::object::{Environment, Object};
+use std::{borrow::BorrowMut, cell::RefCell, rc::Rc};
+
+use super::object::object::{Environment, Function, Object};
 use crate::parser::ast::ast::{Expression, Identifier, IfExpression, Node, Statement};
 
 const TRUE: Object = Object::Boolean(true);
@@ -51,7 +53,27 @@ fn eval_expression(expression: Expression, environment: &mut Environment) -> Obj
             return eval_infix_expression(left, &infix_expression.operator, right);
         }
         Expression::If(if_expression) => eval_if_expression(if_expression, environment),
-        _ => Object::Error(format!("unkown expression: {}", expression.to_string())),
+        Expression::Function(function_literal) => {
+            return Object::Function(Function::new(
+                function_literal.arguments,
+                function_literal.body,
+                environment.clone(),
+            ))
+        }
+        Expression::Call(call_expresson) => {
+            let function = eval(Node::Expression(*call_expresson.function), environment);
+            if is_error(&function) {
+                return function;
+            }
+
+            let arguments = eval_expressions(call_expresson.arguments, environment);
+
+            if arguments.len() == 1 && is_error(&arguments[0]) {
+                return arguments[0].clone();
+            }
+
+            apply_function(function, arguments, environment)
+        }
     }
 }
 
@@ -179,6 +201,71 @@ fn is_truthy(object: &Object) -> bool {
         Object::Boolean(value) => *value,
         Object::Null => false,
         _ => false,
+    }
+}
+
+fn eval_expressions(expressions: Vec<Expression>, environment: &mut Environment) -> Vec<Object> {
+    let mut result = vec![];
+
+    for expression in expressions {
+        let object = eval(Node::Expression(expression), environment);
+
+        if is_error(&object) {
+            return vec![object];
+        }
+
+        result.push(object);
+    }
+
+    result
+}
+
+fn apply_function(
+    function: Object,
+    arguments: Vec<Object>,
+    environment: &mut Environment,
+) -> Object {
+    match function {
+        Object::Function(function) => {
+            let mut extended_env = extend_function_env(
+                &function,
+                arguments,
+                Rc::new(RefCell::new(environment.clone())),
+            );
+
+            let evaluated_body = eval(
+                Node::Statement(Statement::Block(function.body)),
+                &mut extended_env,
+            );
+
+            unwrap_return_value(evaluated_body)
+        }
+        _ => {
+            return Object::Error(format!(
+                "expected FUNCTION, found: {}",
+                function.object_type()
+            ))
+        }
+    }
+}
+
+fn extend_function_env(
+    function: &Function,
+    arguments: Vec<Object>,
+    environment: Rc<RefCell<Environment>>,
+) -> Environment {
+    let mut extended_env = Environment::new_enclosed(environment);
+
+    for (i, parameter) in function.parameters.iter().enumerate() {
+        extended_env.set(&parameter.name, arguments[i].clone());
+    }
+    extended_env
+}
+
+fn unwrap_return_value(object: Object) -> Object {
+    match object {
+        Object::Return(return_object) => *return_object,
+        _ => object,
     }
 }
 
