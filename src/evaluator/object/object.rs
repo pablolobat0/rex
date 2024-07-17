@@ -1,6 +1,6 @@
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
-use std::{borrow::Borrow, cell::RefCell};
 
 use crate::parser::ast::ast::{BlockStatement, Identifier};
 
@@ -9,8 +9,8 @@ pub enum Object {
     Integer(i64),
     Boolean(bool),
     Return(Box<Object>),
-    Error(String),
     Function(Function),
+    Error(String),
     Null,
 }
 
@@ -20,9 +20,9 @@ impl Object {
             Object::Integer(integer) => integer.to_string(),
             Object::Boolean(boolean) => boolean.to_string(),
             Object::Return(return_object) => return_object.to_string(),
+            Object::Function(function) => function.to_string(),
             Object::Error(error_message) => error_message.to_string(),
             Object::Null => "null".to_string(),
-            Object::Function(function) => function.to_string(),
         }
     }
 
@@ -31,16 +31,18 @@ impl Object {
             Object::Integer(_) => "INTEGER".to_string(),
             Object::Boolean(_) => "BOOLEAN".to_string(),
             Object::Return(_) => "RETURN".to_string(),
+            Object::Function(_) => "FUNCTION".to_string(),
             Object::Error(_) => "ERROR".to_string(),
             Object::Null => "NULL".to_string(),
-            Object::Function(_) => "FUNCTION".to_string(),
         }
     }
 }
+
+// Store for identifier values
 #[derive(Debug, PartialEq, Clone)]
 pub struct Environment {
     store: HashMap<String, Object>,
-    outer: Option<Rc<RefCell<Environment>>>,
+    outer: Option<Rc<RefCell<Environment>>>, // Outer environment of the function
 }
 
 impl Environment {
@@ -61,6 +63,7 @@ impl Environment {
     pub fn get(&self, key: &str) -> Option<Object> {
         let object = self.store.get(key);
 
+        // If the object doesn't exist in the store we search in the outer
         if !object.is_some() {
             match &self.outer {
                 Some(outer) => return outer.as_ref().borrow().get(key),

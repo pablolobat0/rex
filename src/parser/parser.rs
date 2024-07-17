@@ -12,17 +12,19 @@ use super::ast::ast::{
 };
 use std::collections::HashMap;
 
+// Precedence order in parsing
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 enum Precedence {
-    Lowest,
-    Equals,      // ==
-    LessGreater, // > or <
-    Sum,         // +
-    Product,     // *
-    Prefix,      // -X or !X
+    Lowest,      // default value
+    Equals,      // ==, !=
+    LessGreater, // >, <, >=, <=
+    Sum,         // +, -
+    Product,     // *, /
+    Prefix,      // -X, !X
     Call,        // myFunction(X)
 }
 
+// Function types for prefix and infix parsing
 type PrefixParseFn = fn(&mut Parser<'_>) -> Option<Expression>;
 type InfixParseFn = fn(&mut Parser, Expression) -> Option<Expression>;
 
@@ -52,6 +54,7 @@ impl<'a> Parser<'a> {
             precedences: create_precedences(),
         };
 
+        // Infix functions
         parser.register_prefix(TokenType::Identifier, parse_identifier);
         parser.register_prefix(TokenType::Integer, parse_integer_literal);
         parser.register_prefix(TokenType::True, parse_boolean_literal);
@@ -62,6 +65,7 @@ impl<'a> Parser<'a> {
         parser.register_prefix(TokenType::If, parse_if_expression);
         parser.register_prefix(TokenType::Function, parse_function_literal);
 
+        // Prefix functions
         parser.register_infix(TokenType::Plus, parse_infix_expression);
         parser.register_infix(TokenType::Minus, parse_infix_expression);
         parser.register_infix(TokenType::Star, parse_infix_expression);
@@ -126,6 +130,7 @@ impl<'a> Parser<'a> {
         }
     }
 
+    // let <identifier> = <expression>
     fn parse_let_statement(&mut self) -> Option<LetStatement> {
         let let_token: Token = self.current_token.clone();
 
@@ -151,6 +156,7 @@ impl<'a> Parser<'a> {
             }
         };
 
+        // The semicolon is optional to improve REPL experience
         while !self.current_token_is(TokenType::Semicolon) {
             self.next_token();
         }
@@ -158,6 +164,7 @@ impl<'a> Parser<'a> {
         Some(LetStatement::new(let_token, identifier, value))
     }
 
+    // return <expression>
     fn parse_return_statement(&mut self) -> Option<ReturnStatement> {
         let token: Token = self.current_token.clone();
 
@@ -170,6 +177,7 @@ impl<'a> Parser<'a> {
             }
         };
 
+        // The semicolon is optional to improve REPL experience
         while !self.current_token_is(TokenType::Semicolon) {
             self.next_token();
         }
@@ -187,6 +195,7 @@ impl<'a> Parser<'a> {
         };
         let expression_statement = Some(ExpressionStatement::new(token, expression));
 
+        // The semicolon is optional to improve REPL experience
         if self.peek_token.kind == TokenType::Semicolon {
             self.next_token();
         }
@@ -211,16 +220,7 @@ impl<'a> Parser<'a> {
     fn parse_expression(&mut self, precedence: Precedence) -> Option<Expression> {
         let prefix_fn = match self.prefix_parse_fns.get(&self.current_token.kind) {
             Some(prefix_fn) => prefix_fn,
-            None => {
-                self.add_error(
-                    format!(
-                        "No prefix parse function found for token: {}",
-                        self.current_token.kind
-                    ),
-                    self.current_token.line,
-                );
-                return None;
-            }
+            None => return self.error_no_prefix_function(),
         };
 
         let mut left_exp = match prefix_fn(self) {
@@ -234,21 +234,34 @@ impl<'a> Parser<'a> {
             self.next_token(); // skip token
             let infix_fn = match self.infix_parse_fns.get(&self.current_token.kind) {
                 Some(infix_fn) => infix_fn,
-                None => {
-                    self.add_error(
-                        format!(
-                            "No infix parse function found for token {}",
-                            self.current_token.kind
-                        ),
-                        self.current_token.line,
-                    );
-                    return None;
-                }
+                None => return self.error_no_infix_function(),
             };
             left_exp = infix_fn(self, left_exp)?;
         }
 
         Some(left_exp)
+    }
+
+    fn error_no_prefix_function(&mut self) -> Option<Expression> {
+        self.add_error(
+            format!(
+                "No prefix parse function found for token: {}",
+                self.current_token.kind
+            ),
+            self.current_token.line,
+        );
+        return None;
+    }
+
+    fn error_no_infix_function(&mut self) -> Option<Expression> {
+        self.add_error(
+            format!(
+                "No infix parse function found for token {}",
+                self.current_token.kind
+            ),
+            self.current_token.line,
+        );
+        return None;
     }
 
     fn current_precedence(&self) -> Precedence {
@@ -299,15 +312,15 @@ fn create_precedences() -> HashMap<TokenType, Precedence> {
 
     precedences
 }
-
-pub fn parse_identifier(parser: &mut Parser<'_>) -> Option<Expression> {
+// Prefix functions
+fn parse_identifier(parser: &mut Parser<'_>) -> Option<Expression> {
     Some(Expression::Identifier(Identifier::new(
         parser.current_token.clone(),
         parser.current_token.lexeme.clone(),
     )))
 }
 
-pub fn parse_integer_literal(parser: &mut Parser<'_>) -> Option<Expression> {
+fn parse_integer_literal(parser: &mut Parser<'_>) -> Option<Expression> {
     let value = match parser.current_token.lexeme.parse::<i64>() {
         Ok(num) => num,
         Err(_) => {
@@ -325,7 +338,7 @@ pub fn parse_integer_literal(parser: &mut Parser<'_>) -> Option<Expression> {
     )))
 }
 
-pub fn parse_boolean_literal(parser: &mut Parser<'_>) -> Option<Expression> {
+fn parse_boolean_literal(parser: &mut Parser<'_>) -> Option<Expression> {
     let value = match parser.current_token.lexeme.as_str() {
         "true" => true,
         "false" => false,
@@ -344,7 +357,7 @@ pub fn parse_boolean_literal(parser: &mut Parser<'_>) -> Option<Expression> {
     )))
 }
 
-pub fn parse_prefix_expression(parser: &mut Parser<'_>) -> Option<Expression> {
+fn parse_prefix_expression(parser: &mut Parser<'_>) -> Option<Expression> {
     let token = parser.current_token.clone();
     let operator = parser.current_token.lexeme.clone();
 
@@ -367,42 +380,6 @@ pub fn parse_prefix_expression(parser: &mut Parser<'_>) -> Option<Expression> {
     Some(Expression::Prefix(PrefixExpression::new(
         token, operator, right,
     )))
-}
-
-pub fn parse_infix_expression(parser: &mut Parser<'_>, left: Expression) -> Option<Expression> {
-    let token = parser.current_token.clone();
-    let operator = parser.current_token.lexeme.clone();
-    let precedence = parser.current_precedence();
-
-    parser.next_token();
-
-    let right = match parser.parse_expression(precedence) {
-        Some(expr) => expr,
-        None => {
-            parser.add_error(
-                format!(
-                    "could not parse right-hand side of infix expression for operator {}",
-                    operator
-                ),
-                parser.current_token.line,
-            );
-            return None;
-        }
-    };
-
-    Some(Expression::Infix(InfixExpression::new(
-        token, left, operator, right,
-    )))
-}
-
-fn parse_grouped_expression(parser: &mut Parser<'_>) -> Option<Expression> {
-    parser.next_token(); // Skip left parenthesis
-    let expression = parser.parse_expression(Precedence::Lowest);
-    if !parser.expect_peek(TokenType::RightParen) {
-        return None;
-    }
-
-    return expression;
 }
 
 fn parse_if_expression(parser: &mut Parser<'_>) -> Option<Expression> {
@@ -489,6 +466,44 @@ fn parse_parameters(parser: &mut Parser<'_>) -> Option<Vec<Identifier>> {
     }
 
     return Some(arguments);
+}
+
+//Infix functions
+
+fn parse_infix_expression(parser: &mut Parser<'_>, left: Expression) -> Option<Expression> {
+    let token = parser.current_token.clone();
+    let operator = parser.current_token.lexeme.clone();
+    let precedence = parser.current_precedence();
+
+    parser.next_token();
+
+    let right = match parser.parse_expression(precedence) {
+        Some(expr) => expr,
+        None => {
+            parser.add_error(
+                format!(
+                    "could not parse right-hand side of infix expression for operator {}",
+                    operator
+                ),
+                parser.current_token.line,
+            );
+            return None;
+        }
+    };
+
+    Some(Expression::Infix(InfixExpression::new(
+        token, left, operator, right,
+    )))
+}
+
+fn parse_grouped_expression(parser: &mut Parser<'_>) -> Option<Expression> {
+    parser.next_token(); // Skip left parenthesis
+    let expression = parser.parse_expression(Precedence::Lowest);
+    if !parser.expect_peek(TokenType::RightParen) {
+        return None;
+    }
+
+    return expression;
 }
 
 fn parse_call_expression(parser: &mut Parser<'_>, left: Expression) -> Option<Expression> {

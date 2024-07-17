@@ -185,6 +185,7 @@ impl<'a> Lexer<'a> {
             Some(&token_type) => token_type,
             None => TokenType::Identifier,
         };
+
         Token::new(kind, lexeme, self.line)
     }
 
@@ -198,6 +199,7 @@ impl<'a> Lexer<'a> {
             }
         }
         let lexeme: String = self.input[start_position..self.position].to_string();
+
         Token::new(TokenType::Integer, lexeme, self.line)
     }
 }

@@ -1,8 +1,9 @@
-use std::{borrow::BorrowMut, cell::RefCell, rc::Rc};
+use std::{cell::RefCell, rc::Rc};
 
 use super::object::object::{Environment, Function, Object};
 use crate::parser::ast::ast::{Expression, Identifier, IfExpression, Node, Statement};
 
+// Objects that only need to be instantiated once
 const TRUE: Object = Object::Boolean(true);
 const FALSE: Object = Object::Boolean(false);
 const NULL: Object = Object::Null;
@@ -42,20 +43,21 @@ fn eval_expression(expression: Expression, environment: &mut Environment) -> Obj
             return eval_prefix_expression(&prefix_expression.operator, right);
         }
         Expression::Infix(infix_expression) => {
-            let right = eval(Node::Expression(*infix_expression.right), environment);
-            if is_error(&right) {
-                return right;
-            }
             let left = eval(Node::Expression(*infix_expression.left), environment);
             if is_error(&left) {
                 return left;
             }
+            let right = eval(Node::Expression(*infix_expression.right), environment);
+            if is_error(&right) {
+                return right;
+            }
+
             return eval_infix_expression(left, &infix_expression.operator, right);
         }
         Expression::If(if_expression) => eval_if_expression(if_expression, environment),
         Expression::Function(function_literal) => {
             return Object::Function(Function::new(
-                function_literal.arguments,
+                function_literal.parameters,
                 function_literal.body,
                 environment.clone(),
             ))
@@ -233,7 +235,7 @@ fn apply_function(function: Object, arguments: Vec<Object>) -> Object {
                 Node::Statement(Statement::Block(function.body)),
                 &mut extended_env,
             );
-
+            // We need to unwrap the value inside the return object
             unwrap_return_value(evaluated_body)
         }
         _ => {
@@ -302,6 +304,7 @@ fn eval_block_statements(statements: Vec<Statement>, environment: &mut Environme
             _ => continue,
         }
     }
+
     result
 }
 

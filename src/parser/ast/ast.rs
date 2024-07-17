@@ -1,25 +1,57 @@
 use crate::lexer::token::token::Token;
 
 pub enum Node {
+    Program(Program),
     Expression(Expression),
     Statement(Statement),
-    Program(Program),
 }
 
 impl Node {
     pub fn get_lexeme(&self) -> String {
         match self {
+            Node::Program(program) => program.get_lexeme(),
             Node::Expression(expression) => expression.get_lexeme(),
             Node::Statement(statement) => statement.get_lexeme(),
-            Node::Program(program) => program.get_lexeme(),
         }
     }
     pub fn to_string(&self) -> String {
         match self {
+            Node::Program(program) => program.to_string(),
             Node::Expression(expression) => expression.to_string(),
             Node::Statement(statement) => statement.to_string(),
-            Node::Program(program) => program.to_string(),
         }
+    }
+}
+
+// Root node of the AST
+#[derive(Debug)]
+pub struct Program {
+    pub statements: Vec<Statement>,
+}
+
+impl Program {
+    pub fn new() -> Program {
+        Program { statements: vec![] }
+    }
+
+    pub fn add_statement(&mut self, statement: Statement) {
+        self.statements.push(statement);
+    }
+
+    pub fn get_lexeme(&self) -> String {
+        if self.statements.len() > 0 {
+            return self.statements[0].get_lexeme();
+        } else {
+            return "".to_string();
+        }
+    }
+
+    pub fn to_string(&self) -> String {
+        self.statements
+            .iter()
+            .map(|statement| statement.to_string())
+            .collect::<Vec<String>>()
+            .join("\n")
     }
 }
 
@@ -64,161 +96,6 @@ impl Expression {
     }
 }
 
-// A statement expresses some action, but does not generate a value
-#[derive(Debug, PartialEq, Clone)]
-pub enum Statement {
-    Let(LetStatement),
-    Return(ReturnStatement),
-    Expression(ExpressionStatement),
-    Block(BlockStatement),
-}
-
-impl Statement {
-    pub fn get_lexeme(&self) -> String {
-        match self {
-            Statement::Let(statement) => statement.get_lexeme(),
-            Statement::Return(statement) => statement.get_lexeme(),
-            Statement::Expression(statement) => statement.get_lexeme(),
-            Statement::Block(statement) => statement.get_lexeme(),
-        }
-    }
-
-    pub fn to_string(&self) -> String {
-        match self {
-            Statement::Let(statement) => statement.to_string(),
-            Statement::Return(statement) => statement.to_string(),
-            Statement::Expression(statement) => statement.to_string(),
-            Statement::Block(statement) => statement.to_string(),
-        }
-    }
-}
-
-#[derive(Debug, PartialEq, Clone)]
-pub struct ExpressionStatement {
-    pub token: Token,
-    pub expression: Expression,
-}
-
-impl ExpressionStatement {
-    pub fn get_lexeme(&self) -> String {
-        self.token.lexeme.clone()
-    }
-
-    pub fn to_string(&self) -> String {
-        match &self.expression {
-            Expression::Identifier(identifier) => format!("{};", identifier.to_string()),
-            Expression::Integer(integer) => format!("{};", integer.to_string()),
-            Expression::Boolean(boolean) => format!("{};", boolean.to_string()),
-            Expression::Prefix(prefix_expression) => format!("{};", prefix_expression.to_string()),
-            Expression::Infix(infix_expression) => format!("{};", infix_expression.to_string()),
-            Expression::If(if_expression) => if_expression.to_string(),
-            Expression::Function(function_literal) => function_literal.to_string(),
-            Expression::Call(call_expression) => format!("{};", call_expression.to_string()),
-        }
-    }
-
-    pub fn new(token: Token, expression: Expression) -> ExpressionStatement {
-        ExpressionStatement { token, expression }
-    }
-}
-
-#[derive(Debug, PartialEq, Clone)]
-pub struct BlockStatement {
-    token: Token,
-    pub statements: Vec<Statement>,
-}
-
-impl BlockStatement {
-    pub fn get_lexeme(&self) -> String {
-        if self.statements.len() > 1 {
-            return self.statements[0].get_lexeme();
-        } else {
-            return "".to_string();
-        }
-    }
-
-    pub fn to_string(&self) -> String {
-        self.statements
-            .iter()
-            .map(|statement| statement.to_string())
-            .collect::<Vec<String>>()
-            .join("\n")
-    }
-
-    pub fn new(token: Token) -> BlockStatement {
-        BlockStatement {
-            token,
-            statements: vec![],
-        }
-    }
-
-    pub fn add_statement(&mut self, statement: Statement) {
-        self.statements.push(statement);
-    }
-}
-
-// Root node of the AST
-#[derive(Debug)]
-pub struct Program {
-    pub statements: Vec<Statement>,
-}
-
-impl Program {
-    pub fn new() -> Program {
-        Program { statements: vec![] }
-    }
-
-    pub fn add_statement(&mut self, statement: Statement) {
-        self.statements.push(statement);
-    }
-
-    pub fn get_lexeme(&self) -> String {
-        if self.statements.len() > 0 {
-            return self.statements[0].get_lexeme();
-        } else {
-            return "".to_string();
-        }
-    }
-
-    pub fn to_string(&self) -> String {
-        self.statements
-            .iter()
-            .map(|statement| statement.to_string())
-            .collect::<Vec<String>>()
-            .join("\n")
-    }
-}
-
-#[derive(Debug, PartialEq, Clone)]
-pub struct LetStatement {
-    pub token: Token,
-    pub identifier: Identifier,
-    pub value: Expression,
-}
-
-impl LetStatement {
-    pub fn new(token: Token, identifier: Identifier, value: Expression) -> LetStatement {
-        LetStatement {
-            token,
-            identifier,
-            value,
-        }
-    }
-
-    pub fn get_lexeme(&self) -> String {
-        self.token.lexeme.clone()
-    }
-
-    pub fn to_string(&self) -> String {
-        format!(
-            "{} {} = {};",
-            self.token.lexeme,
-            self.identifier.to_string(),
-            self.value.to_string()
-        )
-    }
-}
-
 #[derive(Debug, PartialEq, Clone)]
 pub struct Identifier {
     pub token: Token,
@@ -236,25 +113,6 @@ impl Identifier {
 
     pub fn to_string(&self) -> String {
         self.name.clone()
-    }
-}
-
-#[derive(Debug, PartialEq, Clone)]
-pub struct ReturnStatement {
-    pub token: Token,
-    pub value: Expression,
-}
-
-impl ReturnStatement {
-    fn get_lexeme(&self) -> String {
-        self.token.lexeme.clone()
-    }
-
-    pub fn to_string(&self) -> String {
-        format!("{} {};", self.token.lexeme.clone(), self.value.to_string())
-    }
-    pub fn new(token: Token, value: Expression) -> ReturnStatement {
-        ReturnStatement { token, value }
     }
 }
 
@@ -404,7 +262,7 @@ impl IfExpression {
 #[derive(Debug, PartialEq, Clone)]
 pub struct FunctionLiteral {
     token: Token,
-    pub arguments: Vec<Identifier>,
+    pub parameters: Vec<Identifier>,
     pub body: BlockStatement,
 }
 
@@ -415,7 +273,7 @@ impl FunctionLiteral {
 
     pub fn to_string(&self) -> String {
         let arguments = self
-            .arguments
+            .parameters
             .iter()
             .map(|argument| argument.to_string())
             .collect::<Vec<String>>()
@@ -431,7 +289,7 @@ impl FunctionLiteral {
     pub fn new(token: Token, arguments: Vec<Identifier>, body: BlockStatement) -> FunctionLiteral {
         FunctionLiteral {
             token,
-            arguments,
+            parameters: arguments,
             body,
         }
     }
@@ -466,5 +324,146 @@ impl CallExpression {
             function: Box::new(function),
             arguments,
         }
+    }
+}
+// A statement expresses some action, but does not generate a value
+#[derive(Debug, PartialEq, Clone)]
+pub enum Statement {
+    Let(LetStatement),
+    Return(ReturnStatement),
+    Expression(ExpressionStatement),
+    Block(BlockStatement),
+}
+
+impl Statement {
+    pub fn get_lexeme(&self) -> String {
+        match self {
+            Statement::Let(statement) => statement.get_lexeme(),
+            Statement::Return(statement) => statement.get_lexeme(),
+            Statement::Expression(statement) => statement.get_lexeme(),
+            Statement::Block(statement) => statement.get_lexeme(),
+        }
+    }
+
+    pub fn to_string(&self) -> String {
+        match self {
+            Statement::Let(statement) => statement.to_string(),
+            Statement::Return(statement) => statement.to_string(),
+            Statement::Expression(statement) => statement.to_string(),
+            Statement::Block(statement) => statement.to_string(),
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct LetStatement {
+    pub token: Token,
+    pub identifier: Identifier,
+    pub value: Expression,
+}
+
+impl LetStatement {
+    pub fn new(token: Token, identifier: Identifier, value: Expression) -> LetStatement {
+        LetStatement {
+            token,
+            identifier,
+            value,
+        }
+    }
+
+    pub fn get_lexeme(&self) -> String {
+        self.token.lexeme.clone()
+    }
+
+    pub fn to_string(&self) -> String {
+        format!(
+            "{} {} = {};",
+            self.token.lexeme,
+            self.identifier.to_string(),
+            self.value.to_string()
+        )
+    }
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct ReturnStatement {
+    pub token: Token,
+    pub value: Expression,
+}
+
+impl ReturnStatement {
+    fn get_lexeme(&self) -> String {
+        self.token.lexeme.clone()
+    }
+
+    pub fn to_string(&self) -> String {
+        format!("{} {};", self.token.lexeme.clone(), self.value.to_string())
+    }
+    pub fn new(token: Token, value: Expression) -> ReturnStatement {
+        ReturnStatement { token, value }
+    }
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct ExpressionStatement {
+    pub token: Token,
+    pub expression: Expression,
+}
+
+impl ExpressionStatement {
+    pub fn get_lexeme(&self) -> String {
+        self.token.lexeme.clone()
+    }
+
+    pub fn to_string(&self) -> String {
+        match &self.expression {
+            Expression::Identifier(identifier) => format!("{};", identifier.to_string()),
+            Expression::Integer(integer) => format!("{};", integer.to_string()),
+            Expression::Boolean(boolean) => format!("{};", boolean.to_string()),
+            Expression::Prefix(prefix_expression) => format!("{};", prefix_expression.to_string()),
+            Expression::Infix(infix_expression) => format!("{};", infix_expression.to_string()),
+            Expression::If(if_expression) => if_expression.to_string(),
+            Expression::Function(function_literal) => function_literal.to_string(),
+            Expression::Call(call_expression) => format!("{};", call_expression.to_string()),
+        }
+    }
+
+    pub fn new(token: Token, expression: Expression) -> ExpressionStatement {
+        ExpressionStatement { token, expression }
+    }
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct BlockStatement {
+    token: Token,
+    pub statements: Vec<Statement>,
+}
+
+impl BlockStatement {
+    pub fn get_lexeme(&self) -> String {
+        if self.statements.len() > 1 {
+            return self.statements[0].get_lexeme();
+        } else {
+            return "".to_string();
+        }
+    }
+
+    pub fn to_string(&self) -> String {
+        self.statements
+            .iter()
+            .map(|statement| statement.to_string())
+            .collect::<Vec<String>>()
+            .join("\n")
+    }
+
+    pub fn new(token: Token) -> BlockStatement {
+        BlockStatement {
+            token,
+            statements: vec![],
+        }
+    }
+
+    pub fn add_statement(&mut self, statement: Statement) {
+        self.statements.push(statement);
     }
 }
