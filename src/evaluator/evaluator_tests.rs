@@ -17,6 +17,7 @@ mod test {
 
         return eval(Node::Program(program), &mut environment);
     }
+
     #[test]
     fn test_eval_integer_literal() {
         let input = "5;";
@@ -210,5 +211,47 @@ mod test {
         let input = "x;";
         let result = test_eval(input);
         assert_eq!(result, Object::Error("identifier not found: x".to_string()));
+    }
+
+    #[test]
+    fn test_function_definition() {
+        let input = "fn(x) { x + 2; };";
+        let result = test_eval(input);
+
+        match result {
+            Object::Function(function) => {
+                assert_eq!(function.parameters.len(), 1);
+                assert_eq!(function.parameters[0].to_string(), "x");
+                assert_eq!(function.body.to_string(), "(x + 2);");
+            }
+            _ => panic!("Expected Function, got {:?}", result),
+        }
+    }
+
+    #[test]
+    fn test_function_application() {
+        let input = "let identity = fn(x) { x; }; identity(5);";
+        let result = test_eval(input);
+        assert_eq!(result, Object::Integer(5));
+
+        let input = "let double = fn(x) { x * 2; }; double(5);";
+        let result = test_eval(input);
+        assert_eq!(result, Object::Integer(10));
+
+        let input = "let add = fn(x, y) { x + y; }; add(5, 5);";
+        let result = test_eval(input);
+        assert_eq!(result, Object::Integer(10));
+
+        let input = "let add = fn(x, y) { x + y; }; add(5 + 5, add(5, 5));";
+        let result = test_eval(input);
+        assert_eq!(result, Object::Integer(20));
+    }
+
+    #[test]
+    fn test_closures() {
+        let input =
+            "let new_adder = fn(x) { fn(y) { x + y }; }; let add_two = new_adder(2); add_two(2);";
+        let result = test_eval(input);
+        assert_eq!(result, Object::Integer(4));
     }
 }
