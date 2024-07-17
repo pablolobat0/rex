@@ -60,19 +60,19 @@ fn eval_expression(expression: Expression, environment: &mut Environment) -> Obj
                 environment.clone(),
             ))
         }
-        Expression::Call(call_expresson) => {
-            let function = eval(Node::Expression(*call_expresson.function), environment);
+        Expression::Call(call_expression) => {
+            let function = eval(Node::Expression(*call_expression.function), environment);
             if is_error(&function) {
                 return function;
             }
 
-            let arguments = eval_expressions(call_expresson.arguments, environment);
+            let arguments = eval_expressions(call_expression.arguments, environment);
 
             if arguments.len() == 1 && is_error(&arguments[0]) {
                 return arguments[0].clone();
             }
 
-            apply_function(function, arguments, environment)
+            apply_function(function, arguments)
         }
     }
 }
@@ -220,17 +220,13 @@ fn eval_expressions(expressions: Vec<Expression>, environment: &mut Environment)
     result
 }
 
-fn apply_function(
-    function: Object,
-    arguments: Vec<Object>,
-    environment: &mut Environment,
-) -> Object {
+fn apply_function(function: Object, arguments: Vec<Object>) -> Object {
     match function {
         Object::Function(function) => {
             let mut extended_env = extend_function_env(
                 &function,
                 arguments,
-                Rc::new(RefCell::new(environment.clone())),
+                Rc::new(RefCell::new(function.environment.clone())),
             );
 
             let evaluated_body = eval(

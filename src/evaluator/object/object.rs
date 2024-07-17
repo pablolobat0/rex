@@ -1,6 +1,6 @@
-use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
+use std::{borrow::Borrow, cell::RefCell};
 
 use crate::parser::ast::ast::{BlockStatement, Identifier};
 
@@ -59,10 +59,16 @@ impl Environment {
     }
 
     pub fn get(&self, key: &str) -> Option<Object> {
-        self.store
-            .get(key)
-            .cloned()
-            .or_else(|| self.outer.as_ref()?.borrow().get(key))
+        let object = self.store.get(key);
+
+        if !object.is_some() {
+            match &self.outer {
+                Some(outer) => return outer.as_ref().borrow().get(key),
+                None => return object.cloned(),
+            };
+        }
+
+        return object.cloned();
     }
 
     pub fn set(&mut self, key: &str, object: Object) {
@@ -74,7 +80,7 @@ impl Environment {
 pub struct Function {
     pub parameters: Vec<Identifier>,
     pub body: BlockStatement,
-    environment: Environment,
+    pub environment: Environment,
 }
 
 impl Function {
