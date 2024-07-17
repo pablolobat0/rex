@@ -155,6 +155,7 @@ impl<'a> Lexer<'a> {
                     Token::new(TokenType::Illegal, "|".to_string(), self.line)
                 }
             }
+            Some('"') => self.read_string(),
             Some(c) => {
                 if c.is_alphabetic() || c == '_' {
                     self.read_identifier_or_keyword()
@@ -173,6 +174,7 @@ impl<'a> Lexer<'a> {
 
     fn read_identifier_or_keyword(&mut self) -> Token {
         let start_position = self.position;
+        self.read_char();
         while let Some(c) = self.current_char {
             if c.is_alphanumeric() || c == '_' {
                 self.read_char();
@@ -191,6 +193,7 @@ impl<'a> Lexer<'a> {
 
     fn read_number(&mut self) -> Token {
         let start_position = self.position;
+        self.read_char();
         while let Some(c) = self.current_char {
             if c.is_digit(10) {
                 self.read_char();
@@ -201,5 +204,19 @@ impl<'a> Lexer<'a> {
         let lexeme: String = self.input[start_position..self.position].to_string();
 
         Token::new(TokenType::Integer, lexeme, self.line)
+    }
+
+    fn read_string(&mut self) -> Token {
+        let start_position = self.position;
+        self.read_char();
+        while let Some(c) = self.current_char {
+            self.read_char();
+            if c == '"' {
+                break;
+            }
+        }
+        let lexeme: String = self.input[start_position..self.position].to_string();
+
+        Token::new(TokenType::String, lexeme, self.line)
     }
 }
