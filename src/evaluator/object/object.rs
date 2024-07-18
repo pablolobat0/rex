@@ -8,6 +8,7 @@ use crate::parser::ast::ast::{BlockStatement, Identifier};
 pub enum Object {
     Integer(i64),
     Boolean(bool),
+    String(String),
     Return(Box<Object>),
     Function(Function),
     Error(String),
@@ -19,6 +20,7 @@ impl Object {
         match self {
             Object::Integer(integer) => integer.to_string(),
             Object::Boolean(boolean) => boolean.to_string(),
+            Object::String(string) => string.to_string(),
             Object::Return(return_object) => return_object.to_string(),
             Object::Function(function) => function.to_string(),
             Object::Error(error_message) => error_message.to_string(),
@@ -30,6 +32,7 @@ impl Object {
         match self {
             Object::Integer(_) => "INTEGER".to_string(),
             Object::Boolean(_) => "BOOLEAN".to_string(),
+            Object::String(_) => "STRING".to_string(),
             Object::Return(_) => "RETURN".to_string(),
             Object::Function(_) => "FUNCTION".to_string(),
             Object::Error(_) => "ERROR".to_string(),

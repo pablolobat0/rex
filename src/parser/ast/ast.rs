@@ -160,7 +160,7 @@ impl BooleanLiteral {
 #[derive(Debug, Clone, PartialEq)]
 pub struct StringLiteral {
     token: Token,
-    value: String,
+    pub value: String,
 }
 
 impl StringLiteral {
