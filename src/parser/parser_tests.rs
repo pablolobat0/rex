@@ -151,6 +151,40 @@ mod tests {
     }
 
     #[test]
+    fn test_string_literals() {
+        let input = "
+        \"Hola\";
+        \"mundo\"
+        ";
+
+        let lexer = Lexer::new(input);
+        let mut parser = Parser::new(lexer);
+
+        let program = parser.parse_program();
+        check_parser_errors(&parser);
+
+        assert_eq!(program.statements.len(), 2);
+
+        let expected_values = vec!["Hola", "mundo"];
+
+        for (i, expected_value) in expected_values.iter().enumerate() {
+            let stmt = &program.statements[i];
+            test_string_literal(stmt, expected_value);
+        }
+    }
+
+    fn test_string_literal(stmt: &Statement, expected_value: &str) {
+        match stmt {
+            Statement::Expression(expression_stmt) => match &expression_stmt.expression {
+                Expression::String(string_literal) => {
+                    assert_eq!(string_literal.get_lexeme(), expected_value);
+                }
+                _ => panic!("stmt is not an String. Got={:?}", stmt),
+            },
+            _ => panic!("stmt is not an ExpressionStatement. Got={:?}", stmt),
+        }
+    }
+    #[test]
     fn test_prefix_expressions() {
         let prefix_tests = vec![("-5", "-", 5), ("!5", "!", 5)];
 
