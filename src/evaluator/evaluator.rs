@@ -34,6 +34,7 @@ fn eval_expression(expression: Expression, environment: &mut Environment) -> Obj
         Expression::Integer(integer) => Object::Integer(integer.value),
         Expression::Identifier(identifier) => eval_identifier(identifier, environment),
         Expression::Boolean(boolean) => eval_boolean(boolean.value),
+        Expression::String(_) => todo!(),
         Expression::Prefix(prefix_expression) => {
             let right = eval(Node::Expression(*prefix_expression.right), environment);
             if is_error(&right) {

@@ -8,7 +8,7 @@ use crate::parser::ast::ast::Identifier;
 use super::ast::ast::{
     BlockStatement, BooleanLiteral, CallExpression, Expression, ExpressionStatement,
     FunctionLiteral, IfExpression, InfixExpression, IntegerLiteral, LetStatement, PrefixExpression,
-    Program, ReturnStatement, Statement,
+    Program, ReturnStatement, Statement, StringLiteral,
 };
 use std::collections::HashMap;
 
@@ -59,6 +59,7 @@ impl<'a> Parser<'a> {
         parser.register_prefix(TokenType::Integer, parse_integer_literal);
         parser.register_prefix(TokenType::True, parse_boolean_literal);
         parser.register_prefix(TokenType::False, parse_boolean_literal);
+        parser.register_prefix(TokenType::String, parse_string_literal);
         parser.register_prefix(TokenType::Minus, parse_prefix_expression);
         parser.register_prefix(TokenType::Bang, parse_prefix_expression);
         parser.register_prefix(TokenType::LeftParen, parse_grouped_expression);
@@ -354,6 +355,13 @@ fn parse_boolean_literal(parser: &mut Parser<'_>) -> Option<Expression> {
     Some(Expression::Boolean(BooleanLiteral::new(
         parser.current_token.clone(),
         value,
+    )))
+}
+
+fn parse_string_literal(parser: &mut Parser<'_>) -> Option<Expression> {
+    Some(Expression::String(StringLiteral::new(
+        parser.current_token.clone(),
+        parser.current_token.lexeme.clone(),
     )))
 }
 

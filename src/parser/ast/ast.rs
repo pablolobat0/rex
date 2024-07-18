@@ -61,6 +61,7 @@ pub enum Expression {
     Identifier(Identifier),
     Integer(IntegerLiteral),
     Boolean(BooleanLiteral),
+    String(StringLiteral),
     Prefix(PrefixExpression),
     Infix(InfixExpression),
     If(IfExpression),
@@ -74,6 +75,7 @@ impl Expression {
             Expression::Identifier(identifier) => identifier.get_lexeme(),
             Expression::Integer(integer) => integer.get_lexeme(),
             Expression::Boolean(boolean) => boolean.get_lexeme(),
+            Expression::String(string) => string.get_lexeme(),
             Expression::Prefix(prefix_expression) => prefix_expression.get_lexeme(),
             Expression::Infix(infinx_expression) => infinx_expression.get_lexeme(),
             Expression::If(if_expression) => if_expression.get_lexeme(),
@@ -87,6 +89,7 @@ impl Expression {
             Expression::Identifier(identifier) => identifier.to_string(),
             Expression::Integer(integer) => integer.to_string(),
             Expression::Boolean(boolean) => boolean.to_string(),
+            Expression::String(string) => string.to_string(),
             Expression::Prefix(prefix_expression) => prefix_expression.to_string(),
             Expression::Infix(infinx_expression) => infinx_expression.to_string(),
             Expression::If(if_expression) => if_expression.to_string(),
@@ -151,6 +154,25 @@ impl BooleanLiteral {
     }
     pub fn new(token: Token, value: bool) -> BooleanLiteral {
         BooleanLiteral { token, value }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct StringLiteral {
+    token: Token,
+    value: String,
+}
+
+impl StringLiteral {
+    pub fn new(token: Token, value: String) -> StringLiteral {
+        StringLiteral { token, value }
+    }
+
+    pub fn get_lexeme(&self) -> String {
+        self.token.lexeme.clone()
+    }
+    pub fn to_string(&self) -> String {
+        self.token.lexeme.clone()
     }
 }
 
@@ -420,6 +442,7 @@ impl ExpressionStatement {
             Expression::Identifier(identifier) => format!("{};", identifier.to_string()),
             Expression::Integer(integer) => format!("{};", integer.to_string()),
             Expression::Boolean(boolean) => format!("{};", boolean.to_string()),
+            Expression::String(string) => format!("{};", string.to_string()),
             Expression::Prefix(prefix_expression) => format!("{};", prefix_expression.to_string()),
             Expression::Infix(infix_expression) => format!("{};", infix_expression.to_string()),
             Expression::If(if_expression) => if_expression.to_string(),
