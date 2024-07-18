@@ -1,4 +1,4 @@
-use crate::lexer::token::token::Token;
+use crate::lexer::token::Token;
 
 pub enum Node {
     Program(Program),
@@ -178,6 +178,7 @@ impl StringLiteral {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct PrefixExpression {
+    // Operator token
     pub token: Token,
     pub operator: String,
     pub right: Box<Expression>,
@@ -202,6 +203,7 @@ impl PrefixExpression {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct InfixExpression {
+    // Operator token
     pub token: Token,
     pub left: Box<Expression>,
     pub operator: String,
@@ -238,9 +240,11 @@ impl InfixExpression {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct IfExpression {
+    // IF token
     token: Token,
     pub condition: Box<Expression>,
     pub consequence: BlockStatement,
+    // Else
     pub alternative: Option<BlockStatement>,
 }
 
@@ -283,6 +287,7 @@ impl IfExpression {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct FunctionLiteral {
+    // FUNCTION token
     token: Token,
     pub parameters: Vec<Identifier>,
     pub body: BlockStatement,
@@ -319,6 +324,7 @@ impl FunctionLiteral {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct CallExpression {
+    // ( token
     token: Token,
     pub function: Box<Expression>,
     pub arguments: Vec<Expression>,
@@ -379,6 +385,7 @@ impl Statement {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct LetStatement {
+    // LET token
     pub token: Token,
     pub identifier: Identifier,
     pub value: Expression,
@@ -409,6 +416,7 @@ impl LetStatement {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct ReturnStatement {
+    // RETURN token
     pub token: Token,
     pub value: Expression,
 }
@@ -458,6 +466,7 @@ impl ExpressionStatement {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct BlockStatement {
+    // { token
     token: Token,
     pub statements: Vec<Statement>,
 }

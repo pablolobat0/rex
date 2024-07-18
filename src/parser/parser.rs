@@ -1,11 +1,11 @@
 use crate::lexer::{
     lexer::Lexer,
-    token::token::{Token, TokenType},
+    token::{Token, TokenType},
 };
 
-use crate::parser::ast::ast::Identifier;
+use crate::parser::ast::Identifier;
 
-use super::ast::ast::{
+use super::ast::{
     BlockStatement, BooleanLiteral, CallExpression, Expression, ExpressionStatement,
     FunctionLiteral, IfExpression, InfixExpression, IntegerLiteral, LetStatement, PrefixExpression,
     Program, ReturnStatement, Statement, StringLiteral,
@@ -106,10 +106,14 @@ impl<'a> Parser<'a> {
         self.errors.push(format!("Line {}: {}", line, message));
     }
 
+    // Consumes a token, updating current and peek token
     fn next_token(&mut self) {
         self.current_token = std::mem::replace(&mut self.peek_token, self.lexer.next_token());
     }
 
+    // Generates the AST
+    // <program> ::= <statement_list>
+    // <statement_list> ::= <statement> <statement_list> | <statement>
     pub fn parse_program(&mut self) -> Program {
         let mut program = Program::new();
 
@@ -123,6 +127,7 @@ impl<'a> Parser<'a> {
         program
     }
 
+    // <statement> ::= <let_statement> | <return_statement> | <expression_statement>
     fn parse_statement(&mut self) -> Option<Statement> {
         match self.current_token.kind {
             TokenType::Let => self.parse_let_statement().map(Statement::Let),
@@ -165,7 +170,7 @@ impl<'a> Parser<'a> {
         Some(LetStatement::new(let_token, identifier, value))
     }
 
-    // return <expression>
+    // <return_statement> ::= return <expression>
     fn parse_return_statement(&mut self) -> Option<ReturnStatement> {
         let token: Token = self.current_token.clone();
 
@@ -218,6 +223,9 @@ impl<'a> Parser<'a> {
         return self.current_token.kind == token;
     }
 
+    // Top-Down Operator Precedence consists of parser_expression, prefix_fn
+    // and infix_fn calling each other recursively using the current and peek
+    // operator precedences
     fn parse_expression(&mut self, precedence: Precedence) -> Option<Expression> {
         let prefix_fn = match self.prefix_parse_fns.get(&self.current_token.kind) {
             Some(prefix_fn) => prefix_fn,
@@ -281,8 +289,8 @@ impl<'a> Parser<'a> {
 
     fn parse_block_statement(&mut self) -> BlockStatement {
         let mut block_statement = BlockStatement::new(self.current_token.clone());
-
-        self.next_token(); // skip left brace
+        // skip left brace
+        self.next_token();
 
         while !self.current_token_is(TokenType::RightBrace)
             && !self.current_token_is(TokenType::EOF)
@@ -390,6 +398,7 @@ fn parse_prefix_expression(parser: &mut Parser<'_>) -> Option<Expression> {
     )))
 }
 
+// <if_expression> ::= if <expression> <block_statement> [else <block_statement>]
 fn parse_if_expression(parser: &mut Parser<'_>) -> Option<Expression> {
     let token = parser.current_token.clone(); // if token
     parser.next_token(); // skip if
@@ -420,6 +429,7 @@ fn parse_if_expression(parser: &mut Parser<'_>) -> Option<Expression> {
     )));
 }
 
+// <function_literal> ::= fn (<parameters>?) <block_statement>
 fn parse_function_literal(parser: &mut Parser<'_>) -> Option<Expression> {
     let token = parser.current_token.clone();
 
@@ -443,6 +453,7 @@ fn parse_function_literal(parser: &mut Parser<'_>) -> Option<Expression> {
     )));
 }
 
+// <parameters> ::= <identifier> (, <identifier>)*
 fn parse_parameters(parser: &mut Parser<'_>) -> Option<Vec<Identifier>> {
     let mut arguments = vec![];
 
@@ -460,8 +471,10 @@ fn parse_parameters(parser: &mut Parser<'_>) -> Option<Vec<Identifier>> {
     arguments.push(identifier);
 
     while parser.peek_token.kind == TokenType::Comma {
-        parser.next_token(); // Skip identifier
-        parser.next_token(); // Skip comma
+        // Skip identifier
+        parser.next_token();
+        // Skip comma
+        parser.next_token();
         let identifier = Identifier::new(
             parser.current_token.clone(),
             parser.current_token.lexeme.clone(),
@@ -478,6 +491,7 @@ fn parse_parameters(parser: &mut Parser<'_>) -> Option<Vec<Identifier>> {
 
 //Infix functions
 
+// <infix_expression> ::= <expression> <infix_operator> <expression>
 fn parse_infix_expression(parser: &mut Parser<'_>, left: Expression) -> Option<Expression> {
     let token = parser.current_token.clone();
     let operator = parser.current_token.lexeme.clone();
@@ -514,6 +528,7 @@ fn parse_grouped_expression(parser: &mut Parser<'_>) -> Option<Expression> {
     return expression;
 }
 
+// <call_expression> ::= <expression> ( <arguments>? )
 fn parse_call_expression(parser: &mut Parser<'_>, left: Expression) -> Option<Expression> {
     let token = parser.current_token.clone();
     match parse_arguments(parser) {
@@ -526,6 +541,7 @@ fn parse_call_expression(parser: &mut Parser<'_>, left: Expression) -> Option<Ex
     }
 }
 
+// <arguments> ::= <expression> (, <expression> )*
 fn parse_arguments(parser: &mut Parser<'_>) -> Option<Vec<Expression>> {
     let mut arguments = vec![];
     if parser.peek_token.kind == TokenType::RightParen {
@@ -540,8 +556,10 @@ fn parse_arguments(parser: &mut Parser<'_>) -> Option<Vec<Expression>> {
     }
 
     while parser.peek_token.kind == TokenType::Comma {
-        parser.next_token(); // Skip argument
-        parser.next_token(); // Skip comma
+        // Skip argument
+        parser.next_token();
+        // Skip comma
+        parser.next_token();
         match parser.parse_expression(Precedence::Lowest) {
             Some(argument) => arguments.push(argument),
             None => return None,

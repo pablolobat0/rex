@@ -2,10 +2,10 @@ mod test {
     use crate::{
         evaluator::{
             evaluator::eval,
-            object::object::{Environment, Object},
+            object::{Environment, Object},
         },
         lexer::lexer::Lexer,
-        parser::{ast::ast::Node, parser::Parser},
+        parser::{ast::Node, parser::Parser},
     };
 
     fn test_eval(input: &str) -> Object {

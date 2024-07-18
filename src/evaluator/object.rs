@@ -2,7 +2,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use crate::parser::ast::ast::{BlockStatement, Identifier};
+use crate::parser::ast::{BlockStatement, Identifier};
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Object {

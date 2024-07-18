@@ -1,9 +1,9 @@
 use std::{cell::RefCell, rc::Rc};
 
-use super::object::object::{Environment, Function, Object};
-use crate::parser::ast::ast::{Expression, Identifier, IfExpression, Node, Statement};
+use super::object::{Environment, Function, Object};
+use crate::parser::ast::{Expression, Identifier, IfExpression, Node, Statement};
 
-// Objects that only need to be instantiated once
+// Only need to be instantiated once
 const TRUE: Object = Object::Boolean(true);
 const FALSE: Object = Object::Boolean(false);
 const NULL: Object = Object::Null;
@@ -18,14 +18,17 @@ pub fn eval(node: Node, environment: &mut Environment) -> Object {
 
 fn eval_program_statements(statements: Vec<Statement>, environment: &mut Environment) -> Object {
     let mut result = NULL;
+
     for statement in statements {
         result = eval(Node::Statement(statement), environment);
         match result {
+            // When find a return, stop evaluating and return the value
             Object::Return(return_value) => return *return_value,
             Object::Error(_) => return result,
             _ => continue,
         }
     }
+
     result
 }
 
@@ -48,6 +51,7 @@ fn eval_expression(expression: Expression, environment: &mut Environment) -> Obj
             if is_error(&left) {
                 return left;
             }
+
             let right = eval(Node::Expression(*infix_expression.right), environment);
             if is_error(&right) {
                 return right;
@@ -187,6 +191,7 @@ fn eval_if_expression(node: IfExpression, environment: &mut Environment) -> Obje
             ))
         }
     }
+
     if is_truthy(&condition) {
         eval(
             Node::Statement(Statement::Block(node.consequence)),
@@ -202,7 +207,6 @@ fn eval_if_expression(node: IfExpression, environment: &mut Environment) -> Obje
 fn is_truthy(object: &Object) -> bool {
     match object {
         Object::Boolean(value) => *value,
-        Object::Null => false,
         _ => false,
     }
 }
@@ -248,6 +252,7 @@ fn apply_function(function: Object, arguments: Vec<Object>) -> Object {
     }
 }
 
+// Extends the function environment with the arguments
 fn extend_function_env(
     function: &Function,
     arguments: Vec<Object>,
@@ -258,6 +263,7 @@ fn extend_function_env(
     for (i, parameter) in function.parameters.iter().enumerate() {
         extended_env.set(&parameter.name, arguments[i].clone());
     }
+
     extended_env
 }
 
@@ -287,6 +293,7 @@ fn eval_statement(statement: Statement, environment: &mut Environment) -> Object
             }
 
             environment.set(&let_statement.identifier.name, value.clone());
+
             value
         }
         Statement::Block(block_statement) => {
@@ -297,8 +304,10 @@ fn eval_statement(statement: Statement, environment: &mut Environment) -> Object
 
 fn eval_block_statements(statements: Vec<Statement>, environment: &mut Environment) -> Object {
     let mut result = NULL;
+
     for statement in statements {
         result = eval(Node::Statement(statement), environment);
+        // When we find return or an error we stop evaluating
         match result {
             Object::Return(_) => return result,
             Object::Error(_) => return result,

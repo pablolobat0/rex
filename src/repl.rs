@@ -1,11 +1,12 @@
 use crate::{
-    evaluator::{evaluator::eval, object::object::Environment},
+    evaluator::{evaluator::eval, object::Environment},
     lexer::lexer::Lexer,
-    parser::{ast::ast::Node, parser::Parser},
+    parser::{ast::Node, parser::Parser},
 };
 use std::io::{self, Write};
 
 const PROMPT: &str = "> ";
+const EXIT_COMMAND: &str = "exit";
 
 pub fn start() {
     let mut environment = Environment::new();
@@ -16,7 +17,7 @@ pub fn start() {
 
         io::stdin()
             .read_line(&mut input)
-            .expect("Error al leer la línea");
+            .expect("Error reading line");
 
         let input = input.trim();
         let lexer = Lexer::new(input);
@@ -29,9 +30,10 @@ pub fn start() {
             continue;
         }
 
-        if program.get_lexeme() == "exit" {
+        if program.get_lexeme() == EXIT_COMMAND {
             return;
         }
+
         println!(
             "{}",
             eval(Node::Program(program), &mut environment).to_string()

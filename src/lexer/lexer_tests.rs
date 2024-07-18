@@ -1,8 +1,7 @@
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::lexer::lexer::Lexer;
-    use crate::lexer::token::token::{Token, TokenType};
+    use crate::lexer::token::{Token, TokenType};
 
     #[test]
     fn test_next_token() {
