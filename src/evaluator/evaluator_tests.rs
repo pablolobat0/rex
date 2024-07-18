@@ -35,6 +35,15 @@ mod test {
     }
 
     #[test]
+    fn test_eval_string_literal() {
+        let test = vec![("\"hola\";", "hola"), ("\"mundo\"", "mundo")];
+        for (input, expected) in test {
+            let result = test_eval(input);
+            assert_eq!(result, Object::String(expected.to_string()));
+        }
+    }
+
+    #[test]
     fn test_eval_bang_prefix_expression() {
         let test = vec![("!true;", false), ("!false;", true)];
         for (input, expected) in test {
