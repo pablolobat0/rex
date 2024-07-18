@@ -141,6 +141,9 @@ fn eval_infix_expression(left: Object, operator: &str, right: Object) -> Object 
         (Object::Boolean(left_value), Object::Boolean(right_value)) => {
             eval_boolean_infix_expression(left_value, operator, right_value)
         }
+        (Object::String(left_value), Object::String(right_value)) => {
+            eval_string_infix_expression(left_value, operator, right_value)
+        }
         (left, right) => Object::Error(format!(
             "type mismatch: {} {} {}",
             left.object_type(),
@@ -174,6 +177,15 @@ fn eval_integer_infix_expression(left_value: i64, operator: &str, right_value: i
 
 fn eval_boolean_infix_expression(left_value: bool, operator: &str, right_value: bool) -> Object {
     match operator {
+        "==" => eval_boolean(left_value == right_value),
+        "!=" => eval_boolean(left_value != right_value),
+        _ => Object::Error(format!("unknow operator: {}", operator)),
+    }
+}
+
+fn eval_string_infix_expression(left_value: String, operator: &str, right_value: String) -> Object {
+    match operator {
+        "+" => Object::String(format!("{}{}", left_value, right_value)),
         "==" => eval_boolean(left_value == right_value),
         "!=" => eval_boolean(left_value != right_value),
         _ => Object::Error(format!("unknow operator: {}", operator)),

@@ -108,6 +108,29 @@ mod test {
     }
 
     #[test]
+    fn test_eval_string_literal_infix_expressions() {
+        let test = vec![("\"hola\" + \" mundo\";", "hola mundo")];
+        for (input, expected) in test {
+            let result = test_eval(input);
+            assert_eq!(result, Object::String(expected.to_string()));
+        }
+
+        let test = vec![
+            ("\"hola\" == \" mundo\";", false),
+            (
+                "\"interprete en rust\" == \"intereprete en python\";",
+                false,
+            ),
+            ("\"rust\" != \"python\"", true),
+            ("\"golang\" != \"golang\"", false),
+        ];
+        for (input, expected) in test {
+            let result = test_eval(input);
+            assert_eq!(result, Object::Boolean(expected));
+        }
+    }
+
+    #[test]
     fn test_eval_if_expression_true_condition() {
         let input = "if (true) { 10 } else { 20 };";
         let result = test_eval(input);
