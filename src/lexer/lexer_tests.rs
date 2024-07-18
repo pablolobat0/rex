@@ -55,7 +55,7 @@ mod tests {
             Token::new(TokenType::Semicolon, ";".to_string(), 7),
             Token::new(TokenType::RightBrace, "}".to_string(), 8),
             Token::new(TokenType::RightBrace, "}".to_string(), 9),
-            Token::new(TokenType::String, "\"Hola mundo\"".to_string(), 10),
+            Token::new(TokenType::String, "Hola mundo".to_string(), 10),
         ];
 
         test_lexer(input, expected_tokens);

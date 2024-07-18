@@ -207,15 +207,16 @@ impl<'a> Lexer<'a> {
     }
 
     fn read_string(&mut self) -> Token {
-        let start_position = self.position;
+        let start_position = self.position + 1;
         self.read_char();
         while let Some(c) = self.current_char {
-            self.read_char();
             if c == '"' {
                 break;
             }
+            self.read_char();
         }
         let lexeme: String = self.input[start_position..self.position].to_string();
+        self.read_char(); // Skip "
 
         Token::new(TokenType::String, lexeme, self.line)
     }
