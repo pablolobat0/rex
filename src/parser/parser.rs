@@ -16,6 +16,7 @@ use std::collections::HashMap;
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 enum Precedence {
     Lowest,      // default value
+    Assigment,   // =
     Equals,      // ==, !=
     LessGreater, // >, <, >=, <=
     Sum,         // +, -
@@ -77,6 +78,7 @@ impl<'a> Parser<'a> {
         parser.register_infix(TokenType::GreaterEqual, parse_infix_expression);
         parser.register_infix(TokenType::Less, parse_infix_expression);
         parser.register_infix(TokenType::LessEqual, parse_infix_expression);
+        parser.register_infix(TokenType::Equal, parse_infix_expression);
         parser.register_infix(TokenType::LeftParen, parse_call_expression);
 
         parser
@@ -342,6 +344,7 @@ fn create_precedences() -> HashMap<TokenType, Precedence> {
     precedences.insert(TokenType::Star, Precedence::Product);
     precedences.insert(TokenType::Slash, Precedence::Product);
     precedences.insert(TokenType::LeftParen, Precedence::Call);
+    precedences.insert(TokenType::Equal, Precedence::Assigment);
 
     precedences
 }

@@ -1,4 +1,4 @@
-use std::{cell::RefCell, rc::Rc};
+use std::{cell::RefCell, fmt::format, rc::Rc};
 
 use super::object::{Environment, Function, Object};
 use crate::parser::ast::{Expression, Identifier, IfExpression, Node, Statement, WhileStatement};
@@ -47,14 +47,27 @@ fn eval_expression(expression: Expression, environment: &mut Environment) -> Obj
             return eval_prefix_expression(&prefix_expression.operator, right);
         }
         Expression::Infix(infix_expression) => {
-            let left = eval(Node::Expression(*infix_expression.left), environment);
+            let right = eval(Node::Expression(*infix_expression.right), environment);
+            if is_error(&right) {
+                return right;
+            }
+
+            let left = eval(
+                Node::Expression(*infix_expression.left.clone()),
+                environment,
+            );
             if is_error(&left) {
                 return left;
             }
 
-            let right = eval(Node::Expression(*infix_expression.right), environment);
-            if is_error(&right) {
-                return right;
+            if infix_expression.operator == "=".to_string() {
+                match *infix_expression.left {
+                    Expression::Identifier(identifier) => {
+                        environment.set(&identifier.name, right.clone());
+                        return NULL;
+                    }
+                    _ => return Object::Error(format!("Expected Identifier")),
+                }
             }
 
             return eval_infix_expression(left, &infix_expression.operator, right);
@@ -144,6 +157,7 @@ fn eval_infix_expression(left: Object, operator: &str, right: Object) -> Object 
         (Object::String(left_value), Object::String(right_value)) => {
             eval_string_infix_expression(left_value, operator, right_value)
         }
+
         (left, right) => Object::Error(format!(
             "type mismatch: {} {} {}",
             left.object_type(),
