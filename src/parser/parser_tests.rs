@@ -60,6 +60,48 @@ mod tests {
         }
     }
 
+    #[test]
+    fn test_parse_while_statement() {
+        let input = r#"
+            while (x < 5) {
+                x = x + 1;
+            }
+        "#;
+
+        let lexer = Lexer::new(input);
+        let mut parser = Parser::new(lexer);
+
+        // Parse the program
+        let program = parser.parse_program();
+        check_parser_errors(&parser);
+
+        assert_eq!(
+            program.statements.len(),
+            1,
+            "Expected 1 statement, got {}",
+            program.statements.len()
+        );
+
+        let while_stmt = match &program.statements[0] {
+            Statement::While(stmt) => stmt,
+            _ => panic!("Expected while statement"),
+        };
+
+        assert_eq!(
+            while_stmt.condition.to_string(),
+            "(x < 5)",
+            "Expected condition to be '(x < 5)', got '{}'",
+            while_stmt.condition.to_string()
+        );
+
+        assert_eq!(
+            while_stmt.body.statements.len(),
+            1,
+            "Expected 1 statement in body, got {}",
+            while_stmt.body.statements.len()
+        );
+    }
+
     fn check_parser_errors(parser: &Parser) {
         let errors = &parser.errors;
         if errors.is_empty() {

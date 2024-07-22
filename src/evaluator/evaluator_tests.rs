@@ -286,4 +286,13 @@ mod test {
         let result = test_eval(input);
         assert_eq!(result, Object::Integer(4));
     }
+
+    #[test]
+    fn test_eval_while_with_return() {
+        let input = "while (true) { return 5; }";
+        let result = test_eval(input);
+
+        // El bucle debería terminar en el primer ciclo con un retorno
+        assert_eq!(result, Object::Integer(5)); // Asumiendo que 5 es el valor esperado para el retorno
+    }
 }

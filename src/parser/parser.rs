@@ -8,7 +8,7 @@ use crate::parser::ast::Identifier;
 use super::ast::{
     BlockStatement, BooleanLiteral, CallExpression, Expression, ExpressionStatement,
     FunctionLiteral, IfExpression, InfixExpression, IntegerLiteral, LetStatement, PrefixExpression,
-    Program, ReturnStatement, Statement, StringLiteral,
+    Program, ReturnStatement, Statement, StringLiteral, WhileStatement,
 };
 use std::collections::HashMap;
 
@@ -130,14 +130,15 @@ impl<'a> Parser<'a> {
     // <statement> ::= <let_statement> | <return_statement> | <expression_statement>
     fn parse_statement(&mut self) -> Option<Statement> {
         match self.current_token.kind {
-            TokenType::Let => self.parse_let_statement().map(Statement::Let),
-            TokenType::Return => self.parse_return_statement().map(Statement::Return),
+            TokenType::Let => self.parse_let_statement(),
+            TokenType::Return => self.parse_return_statement(),
+            TokenType::While => self.parse_while_statement(),
             _ => self.parse_expression_statement().map(Statement::Expression),
         }
     }
 
     // let <identifier> = <expression>
-    fn parse_let_statement(&mut self) -> Option<LetStatement> {
+    fn parse_let_statement(&mut self) -> Option<Statement> {
         let let_token: Token = self.current_token.clone();
 
         if !self.expect_peek(TokenType::Identifier) {
@@ -167,14 +168,16 @@ impl<'a> Parser<'a> {
             self.next_token();
         }
 
-        Some(LetStatement::new(let_token, identifier, value))
+        Some(Statement::Let(LetStatement::new(
+            let_token, identifier, value,
+        )))
     }
 
     // <return_statement> ::= return <expression>
-    fn parse_return_statement(&mut self) -> Option<ReturnStatement> {
+    fn parse_return_statement(&mut self) -> Option<Statement> {
         let token: Token = self.current_token.clone();
-
-        self.next_token(); // skip return
+        // Consume while
+        self.next_token();
 
         let value = match self.parse_expression(Precedence::Lowest) {
             Some(expr) => expr,
@@ -188,7 +191,28 @@ impl<'a> Parser<'a> {
             self.next_token();
         }
 
-        Some(ReturnStatement::new(token, value))
+        Some(Statement::Return(ReturnStatement::new(token, value)))
+    }
+
+    fn parse_while_statement(&mut self) -> Option<Statement> {
+        let token = self.current_token.clone();
+        // Consume while
+        self.next_token();
+
+        let condition = self.parse_expression(Precedence::Lowest);
+
+        if !self.expect_peek(TokenType::LeftBrace) {
+            return None;
+        }
+
+        let body = self.parse_block_statement();
+
+        // Skip right brace
+        self.next_token();
+
+        Some(Statement::While(WhileStatement::new(
+            token, condition?, body,
+        )))
     }
 
     fn parse_expression_statement(&mut self) -> Option<ExpressionStatement> {
@@ -401,7 +425,9 @@ fn parse_prefix_expression(parser: &mut Parser<'_>) -> Option<Expression> {
 // <if_expression> ::= if <expression> <block_statement> [else <block_statement>]
 fn parse_if_expression(parser: &mut Parser<'_>) -> Option<Expression> {
     let token = parser.current_token.clone(); // if token
-    parser.next_token(); // skip if
+                                              // Consume if
+    parser.next_token();
+
     let condition = parser.parse_expression(Precedence::Lowest);
 
     if !parser.expect_peek(TokenType::LeftBrace) {

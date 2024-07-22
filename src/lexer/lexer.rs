@@ -221,10 +221,6 @@ impl<'a> Lexer<'a> {
             }
             self.read_char();
         }
-        println!(
-            "After multi-line comment: position = {}, current_char = {:?}",
-            self.position, self.current_char
-        );
     }
 
     fn read_identifier_or_keyword(&mut self) -> Token {
@@ -249,34 +245,16 @@ impl<'a> Lexer<'a> {
 
     fn read_number(&mut self) -> Token {
         let start_position = self.position;
-        println!(
-            "Read number: start_position = {}, position = {}, current_char = {:?}",
-            start_position, self.position, self.current_char
-        );
 
         while let Some(c) = self.current_char {
             if !c.is_digit(10) {
-                println!(
-                    "Read number: start_position = {}, position = {}, current_char = {:?}",
-                    start_position, self.position, self.current_char
-                );
                 break;
             }
-            println!(
-                "Read number: start_position = {}, position = {}, current_char = {:?}",
-                start_position, self.position, self.current_char
-            );
             self.read_char();
         }
 
         let lexeme: String = self.input[start_position..self.position].to_string();
 
-        println!(
-            "Read number: start_position = {}, position = {}, lexeme = {:?}",
-            start_position,
-            self.position,
-            self.input[start_position..self.position].to_string()
-        );
         Token::new(TokenType::Integer, lexeme, self.line)
     }
 

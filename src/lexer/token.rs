@@ -40,6 +40,7 @@ pub enum TokenType {
     False,
     If,
     Else,
+    While,
     Null,
     // End of file
     EOF,
@@ -85,6 +86,7 @@ impl fmt::Display for TokenType {
             TokenType::False => "false",
             TokenType::If => "if",
             TokenType::Else => "else",
+            TokenType::While => "while",
             TokenType::Null => "null",
         };
         write!(f, "{}", token_str)
@@ -114,6 +116,7 @@ pub fn keywords() -> HashMap<&'static str, TokenType> {
     m.insert("return", TokenType::Return);
     m.insert("true", TokenType::True);
     m.insert("false", TokenType::False);
+    m.insert("while", TokenType::While);
     m.insert("null", TokenType::Null);
 
     m

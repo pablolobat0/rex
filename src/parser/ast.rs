@@ -1,3 +1,5 @@
+use std::fmt::format;
+
 use crate::lexer::token::Token;
 
 pub enum Node {
@@ -361,6 +363,7 @@ pub enum Statement {
     Return(ReturnStatement),
     Expression(ExpressionStatement),
     Block(BlockStatement),
+    While(WhileStatement),
 }
 
 impl Statement {
@@ -370,6 +373,7 @@ impl Statement {
             Statement::Return(statement) => statement.get_lexeme(),
             Statement::Expression(statement) => statement.get_lexeme(),
             Statement::Block(statement) => statement.get_lexeme(),
+            Statement::While(statement) => statement.get_lexeme(),
         }
     }
 
@@ -379,6 +383,7 @@ impl Statement {
             Statement::Return(statement) => statement.to_string(),
             Statement::Expression(statement) => statement.to_string(),
             Statement::Block(statement) => statement.to_string(),
+            Statement::While(statement) => statement.get_lexeme(),
         }
     }
 }
@@ -497,5 +502,34 @@ impl BlockStatement {
 
     pub fn add_statement(&mut self, statement: Statement) {
         self.statements.push(statement);
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct WhileStatement {
+    pub token: Token,
+    pub condition: Expression,
+    pub body: BlockStatement,
+}
+
+impl WhileStatement {
+    pub fn new(token: Token, condition: Expression, body: BlockStatement) -> WhileStatement {
+        WhileStatement {
+            token,
+            condition,
+            body,
+        }
+    }
+
+    pub fn get_lexeme(&self) -> String {
+        self.token.lexeme.clone()
+    }
+    pub fn to_string(&self) -> String {
+        format!(
+            "{} {} {{ {} }}",
+            self.get_lexeme(),
+            self.condition.to_string(),
+            self.body.to_string()
+        )
     }
 }

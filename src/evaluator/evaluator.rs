@@ -1,7 +1,7 @@
 use std::{cell::RefCell, rc::Rc};
 
 use super::object::{Environment, Function, Object};
-use crate::parser::ast::{Expression, Identifier, IfExpression, Node, Statement};
+use crate::parser::ast::{Expression, Identifier, IfExpression, Node, Statement, WhileStatement};
 
 // Only need to be instantiated once
 const TRUE: Object = Object::Boolean(true);
@@ -308,10 +308,51 @@ fn eval_statement(statement: Statement, environment: &mut Environment) -> Object
 
             value
         }
+        Statement::While(while_statement) => eval_while_statement(while_statement, environment),
         Statement::Block(block_statement) => {
             eval_block_statements(block_statement.statements, environment)
         }
     }
+}
+
+fn eval_while_statement(node: WhileStatement, environment: &mut Environment) -> Object {
+    let mut condition = eval(Node::Expression(node.condition.clone()), environment);
+    if let Object::Error(_) = condition {
+        return condition;
+    }
+
+    if !matches!(condition, Object::Boolean(_)) {
+        return Object::Error(format!(
+            "type mismatch: expected BOOLEAN but found {}",
+            condition.object_type()
+        ));
+    }
+
+    while is_truthy(&condition) {
+        let result = eval(
+            Node::Statement(Statement::Block(node.body.clone())),
+            environment,
+        );
+        match result {
+            Object::Return(return_object) => return *return_object,
+            Object::Error(_) => return result,
+            _ => {}
+        }
+
+        condition = eval(Node::Expression(node.condition.clone()), environment);
+        if let Object::Error(_) = condition {
+            return condition;
+        }
+
+        if !matches!(condition, Object::Boolean(_)) {
+            return Object::Error(format!(
+                "type mismatch: expected BOOLEAN but found {}",
+                condition.object_type()
+            ));
+        }
+    }
+
+    return NULL;
 }
 
 fn eval_block_statements(statements: Vec<Statement>, environment: &mut Environment) -> Object {
