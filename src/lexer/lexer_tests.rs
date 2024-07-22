@@ -15,6 +15,12 @@ mod tests {
                         }
                     }
                     \"Hola mundo\"
+                    // Esto es un comentario
+                    1;
+                    /* Esto es un comentario de
+                    dos líneas */
+                    2;
+                    let café = 42;
                     ";
 
         let expected_tokens = vec![
@@ -55,6 +61,15 @@ mod tests {
             Token::new(TokenType::RightBrace, "}".to_string(), 8),
             Token::new(TokenType::RightBrace, "}".to_string(), 9),
             Token::new(TokenType::String, "Hola mundo".to_string(), 10),
+            Token::new(TokenType::Integer, "1".to_string(), 12),
+            Token::new(TokenType::Semicolon, ";".to_string(), 12),
+            Token::new(TokenType::Integer, "2".to_string(), 15),
+            Token::new(TokenType::Semicolon, ";".to_string(), 15),
+            Token::new(TokenType::Let, "let".to_string(), 16),
+            Token::new(TokenType::Identifier, "café".to_string(), 16),
+            Token::new(TokenType::Equal, "=".to_string(), 16),
+            Token::new(TokenType::Integer, "42".to_string(), 16),
+            Token::new(TokenType::Semicolon, ";".to_string(), 16),
         ];
 
         test_lexer(input, expected_tokens);
