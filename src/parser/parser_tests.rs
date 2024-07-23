@@ -8,6 +8,8 @@ use crate::parser::parser::Parser;
 
 #[cfg(test)]
 mod tests {
+    use core::panic;
+
     use super::*;
 
     #[test]
@@ -154,6 +156,130 @@ mod tests {
                 _ => panic!("stmt is not an Identifier or an Integer. Got={:?}", stmt),
             },
             _ => panic!("stmt is not an ExpressionStatement. Got={:?}", stmt),
+        }
+    }
+    #[test]
+    fn test_parse_while_loop_with_if_and_assignment() {
+        let input = "while (true) { 
+                        if (a == 5) {
+                            return 5; 
+                        }
+                        a = a + 1;
+                    }";
+
+        let lexer = Lexer::new(input);
+        let mut parser = Parser::new(lexer);
+        let program = parser.parse_program();
+
+        check_parser_errors(&parser);
+
+        // Verificar el número de statements
+        assert_eq!(
+            program.statements.len(),
+            1,
+            "El programa debe contener un statement"
+        );
+
+        // Verificar el statement while
+        match &program.statements[0] {
+            Statement::While(while_stmt) => {
+                // Verificar la condición
+                match &while_stmt.condition {
+                    Expression::Boolean(bool_expr) => {
+                        assert!(bool_expr.value, "Se esperaba que la condición fuera true")
+                    }
+                    _ => panic!("Se esperaba una expresión booleana en la condición del while"),
+                }
+
+                // Verificar el bloque de statements dentro del while
+                let block_stmt = &while_stmt.body;
+                assert_eq!(
+                    block_stmt.statements.len(),
+                    2,
+                    "El bloque debe contener dos statements"
+                );
+
+                // Verificar el primer statement en el bloque: if (a == 5) { return 5; }
+                match &block_stmt.statements[0] {
+                    Statement::Expression(expr_stmt) => {
+                        match &expr_stmt.expression {
+                            Expression::If(if_expr) => {
+                                // Verificar la condición del if
+                                match &*if_expr.condition {
+                                    Expression::Infix(infix_expr) => {
+                                        match &*infix_expr.left {
+                                            Expression::Identifier(ident) => assert_eq!(ident.name, "a", "Se esperaba el identificador 'a'"),
+                                            _ => panic!("Se esperaba un identificador en el lado izquierdo de la expresión infija"),
+                                        }
+                                        assert_eq!(
+                                            infix_expr.operator, "==",
+                                            "Se esperaba el operador '=='"
+                                        );
+                                        match &*infix_expr.right {
+                                            Expression::Integer(int_expr) => assert_eq!(int_expr.value, 5, "Se esperaba el valor entero 5"),
+                                            _ => panic!("Se esperaba una expresión entera en el lado derecho de la expresión infija"),
+                                        }
+                                    }
+                                    _ => panic!(
+                                        "Se esperaba una expresión infija en la condición del if"
+                                    ),
+                                }
+
+                                // Verificar el return statement dentro del bloque del if
+                                let consequence = if_expr.consequence.clone();
+                                let stmt = &consequence.statements[0];
+                                match stmt {
+                                        Statement::Return(return_stmt) => {
+                                            match &return_stmt.value {
+                                                Expression::Integer(int_expr) => assert_eq!(int_expr.value, 5, "Se esperaba el valor de retorno 5"),
+                                                _ => panic!("Se esperaba una expresión entera en el statement de retorno"),
+                                            }
+                                        }
+                                        _ => panic!("Se esperaba un statement de retorno dentro del bloque del if"),
+                                    }
+                            }
+                            _ => panic!("Se esperaba un statement if dentro del while"),
+                        }
+                    }
+                    _ => {
+                        panic!("Se esperaba un statement de expresión dentro del bloque del while")
+                    }
+                }
+
+                // Verificar el segundo statement en el bloque: a = a + 1;
+                match &block_stmt.statements[1] {
+                    Statement::Expression(expr_stmt) => match &expr_stmt.expression {
+                        Expression::Infix(infix_expr) => {
+                            match &*infix_expr.left {
+                                    Expression::Identifier(ident) => assert_eq!(ident.name, "a", "Se esperaba el identificador 'a'"),
+                                    _ => panic!("Se esperaba un identificador en el lado izquierdo de la expresión infija"),
+                                }
+                            assert_eq!(infix_expr.operator, "=", "Se esperaba el operador '='");
+                            match &*infix_expr.right {
+                                    Expression::Infix(infix_expr) => {
+                                        match &*infix_expr.left {
+                                            Expression::Identifier(ident) => assert_eq!(ident.name, "a", "Se esperaba el identificador 'a' en el lado izquierdo de la adición"),
+                                            _ => panic!("Se esperaba un identificador en el lado izquierdo de la adición"),
+                                        }
+                                        assert_eq!(infix_expr.operator, "+", "Se esperaba el operador '+'");
+                                        match &*infix_expr.right {
+                                            Expression::Integer(int_expr) => assert_eq!(int_expr.value, 1, "Se esperaba el valor entero 1"),
+                                            _ => panic!("Se esperaba una expresión entera en el lado derecho de la adición"),
+                                        }
+                                    }
+                                    _ => panic!("Se esperaba una expresión infija en el lado derecho de la asignación"),
+                                }
+                        }
+                        _ => {
+                            panic!("Se esperaba una expresión infija en el statement de asignación")
+                        }
+                    },
+                    _ => {
+                        panic!("Se esperaba un statement de expresión dentro del bloque del while")
+                    }
+                }
+            }
+            _ => panic!("Se esperaba un statement while en el programa"),
         }
     }
 

@@ -249,6 +249,10 @@ impl<'a> Parser<'a> {
         return self.current_token.kind == token;
     }
 
+    fn peek_token_is(&self, token: TokenType) -> bool {
+        return self.peek_token.kind == token;
+    }
+
     // Top-Down Operator Precedence consists of parser_expression, prefix_fn
     // and infix_fn calling each other recursively using the current and peek
     // operator precedences
@@ -438,16 +442,16 @@ fn parse_if_expression(parser: &mut Parser<'_>) -> Option<Expression> {
     }
 
     let consequence = parser.parse_block_statement();
-    parser.next_token(); // Skip rigth brace
     let mut alternative: Option<BlockStatement> = None;
 
-    if parser.current_token_is(TokenType::Else) {
+    if parser.peek_token_is(TokenType::Else) {
+        // Consume right brace
+        parser.next_token();
         if !parser.expect_peek(TokenType::LeftBrace) {
             return None;
         }
 
         alternative = Some(parser.parse_block_statement());
-        parser.next_token(); // Skip rigth brace
     }
 
     return Some(Expression::If(IfExpression::new(

@@ -294,6 +294,21 @@ mod test {
 
         assert_eq!(result, Object::Integer(5));
     }
+
+    #[test]
+    fn test_eval_while() {
+        let input = "let a = 1;
+                    while (true) { 
+                        if a == 5 {
+                            return 5; 
+                        }
+                        a = a + 1;
+                    }";
+        let result = test_eval(input);
+
+        assert_eq!(result, Object::Integer(5));
+    }
+
     #[test]
     fn test_eval_assigment() {
         let input = "let x = 1;

@@ -1,4 +1,4 @@
-use std::{cell::RefCell, fmt::format, rc::Rc};
+use std::{cell::RefCell, rc::Rc};
 
 use super::object::{Environment, Function, Object};
 use crate::parser::ast::{Expression, Identifier, IfExpression, Node, Statement, WhileStatement};
@@ -47,7 +47,10 @@ fn eval_expression(expression: Expression, environment: &mut Environment) -> Obj
             return eval_prefix_expression(&prefix_expression.operator, right);
         }
         Expression::Infix(infix_expression) => {
-            let right = eval(Node::Expression(*infix_expression.right), environment);
+            let right = eval(
+                Node::Expression(*infix_expression.right.clone()),
+                environment,
+            );
             if is_error(&right) {
                 return right;
             }
@@ -66,7 +69,13 @@ fn eval_expression(expression: Expression, environment: &mut Environment) -> Obj
                         environment.set(&identifier.name, right.clone());
                         return NULL;
                     }
-                    _ => return Object::Error(format!("Expected Identifier")),
+                    _ => {
+                        return Object::Error(format!(
+                            "Expected Identifier found {} {}",
+                            infix_expression.left.to_string(),
+                            infix_expression.right.to_string()
+                        ))
+                    }
                 }
             }
 
@@ -347,6 +356,7 @@ fn eval_while_statement(node: WhileStatement, environment: &mut Environment) -> 
             Node::Statement(Statement::Block(node.body.clone())),
             environment,
         );
+
         match result {
             Object::Return(return_object) => return *return_object,
             Object::Error(_) => return result,
@@ -356,13 +366,6 @@ fn eval_while_statement(node: WhileStatement, environment: &mut Environment) -> 
         condition = eval(Node::Expression(node.condition.clone()), environment);
         if let Object::Error(_) = condition {
             return condition;
-        }
-
-        if !matches!(condition, Object::Boolean(_)) {
-            return Object::Error(format!(
-                "type mismatch: expected BOOLEAN but found {}",
-                condition.object_type()
-            ));
         }
     }
 
