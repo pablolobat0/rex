@@ -50,10 +50,7 @@ impl<'a> Lexer<'a> {
 
     fn skip_whitespaces(&mut self) {
         while let Some(c) = self.current_char {
-            if c.is_whitespace() {
-                if c == '\n' {
-                    self.line += 1;
-                }
+            if c == '\t' || c == ' ' || c == '\r' {
                 self.read_char();
             } else {
                 break;
@@ -137,10 +134,6 @@ impl<'a> Lexer<'a> {
                 self.read_char();
                 Token::new(TokenType::Colon, ":".to_string(), self.line)
             }
-            Some(';') => {
-                self.read_char();
-                Token::new(TokenType::Semicolon, ";".to_string(), self.line)
-            }
             Some(',') => {
                 self.read_char();
                 Token::new(TokenType::Comma, ",".to_string(), self.line)
@@ -161,6 +154,12 @@ impl<'a> Lexer<'a> {
                 } else {
                     Token::new(TokenType::Bang, "!".to_string(), self.line)
                 }
+            }
+            Some('\n') => {
+                self.read_char();
+                let line = self.line;
+                self.line += 1;
+                Token::new(TokenType::NewLine, "\n".to_string(), line)
             }
             Some('&') => {
                 self.read_char();
@@ -202,6 +201,8 @@ impl<'a> Lexer<'a> {
         self.read_char();
         while let Some(c) = self.current_char {
             if c == '\n' {
+                self.line += 1;
+                self.read_char();
                 break;
             }
             self.read_char();

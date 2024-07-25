@@ -19,8 +19,7 @@ pub fn start() {
             .read_line(&mut input)
             .expect("Error reading line");
 
-        let input = input.trim();
-        let lexer = Lexer::new(input);
+        let lexer = Lexer::new(&input);
         let mut parser = Parser::new(lexer);
 
         let program = parser.parse_program();

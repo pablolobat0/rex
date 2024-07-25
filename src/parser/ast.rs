@@ -265,11 +265,11 @@ impl IfExpression {
 
         if self.alternative.is_some() {
             format!(
-                "if {} {{ {} }} else {{ {} }}",
+                "if {} {{\n{}\n}} else {{\n{}\n}}",
                 condition_str, consequence_str, alternative_str
             )
         } else {
-            format!("if {} {{ {} }}", condition_str, consequence_str)
+            format!("if {} {{\n{}\n}}", condition_str, consequence_str)
         }
     }
     pub fn new(
@@ -309,7 +309,7 @@ impl FunctionLiteral {
             .join(", ");
 
         format!(
-            "{}({}){{{}}}",
+            "{}({}) {{\n{}\n}}",
             self.token.lexeme,
             arguments,
             self.body.to_string()
@@ -411,7 +411,7 @@ impl LetStatement {
 
     pub fn to_string(&self) -> String {
         format!(
-            "{} {} = {};",
+            "{} {} = {}",
             self.token.lexeme,
             self.identifier.to_string(),
             self.value.to_string()
@@ -432,7 +432,7 @@ impl ReturnStatement {
     }
 
     pub fn to_string(&self) -> String {
-        format!("{} {};", self.token.lexeme.clone(), self.value.to_string())
+        format!("{} {}", self.token.lexeme.clone(), self.value.to_string())
     }
     pub fn new(token: Token, value: Expression) -> ReturnStatement {
         ReturnStatement { token, value }
@@ -452,15 +452,15 @@ impl ExpressionStatement {
 
     pub fn to_string(&self) -> String {
         match &self.expression {
-            Expression::Identifier(identifier) => format!("{};", identifier.to_string()),
-            Expression::Integer(integer) => format!("{};", integer.to_string()),
-            Expression::Boolean(boolean) => format!("{};", boolean.to_string()),
-            Expression::String(string) => format!("{};", string.to_string()),
-            Expression::Prefix(prefix_expression) => format!("{};", prefix_expression.to_string()),
-            Expression::Infix(infix_expression) => format!("{};", infix_expression.to_string()),
+            Expression::Identifier(identifier) => identifier.to_string(),
+            Expression::Integer(integer) => integer.to_string(),
+            Expression::Boolean(boolean) => boolean.to_string(),
+            Expression::String(string) => string.to_string(),
+            Expression::Prefix(prefix_expression) => prefix_expression.to_string(),
+            Expression::Infix(infix_expression) => infix_expression.to_string(),
             Expression::If(if_expression) => if_expression.to_string(),
             Expression::Function(function_literal) => function_literal.to_string(),
-            Expression::Call(call_expression) => format!("{};", call_expression.to_string()),
+            Expression::Call(call_expression) => call_expression.to_string(),
         }
     }
 

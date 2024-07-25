@@ -16,11 +16,11 @@ pub enum TokenType {
     Greater,
     Less,
     Colon,
-    Semicolon,
     Comma,
     Dot,
     Question,
     Bang,
+    NewLine, // Line terminator
     // Operators
     BangEqual,
     EqualEqual,
@@ -68,9 +68,9 @@ impl fmt::Display for TokenType {
             TokenType::Less => "<",
             TokenType::Greater => ">",
             TokenType::Colon => ":",
-            TokenType::Semicolon => ";",
             TokenType::Comma => ",",
             TokenType::Dot => ".",
+            TokenType::NewLine => "\\n",
             TokenType::Question => "?",
             TokenType::Bang => "!",
             TokenType::BangEqual => "!=",

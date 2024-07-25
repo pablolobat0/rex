@@ -15,12 +15,12 @@ mod tests {
     #[test]
     fn test_let_and_return_statements() {
         let input = "
-        let x = 5;
-        let y = 10;
-        let foobar = 838383;
-        return 5;
-        return 15;
-        return 55;
+        let x = 5
+        let y = 10
+        let foobar = 838383
+        return 5
+        return 15
+        return 55
         ";
 
         let lexer = Lexer::new(input);
@@ -66,7 +66,7 @@ mod tests {
     fn test_parse_while_statement() {
         let input = r#"
             while (x < 5) {
-                x = x + 1;
+                x = x + 1
             }
         "#;
 
@@ -120,12 +120,12 @@ mod tests {
     #[test]
     fn test_identifiers_and_integer_literals_statements() {
         let input = "
-        foobar;
-        x;
-        y;
-        5;
-        54;
-        90;
+        foobar
+        x
+        y
+        5
+        54
+        90
         ";
 
         let lexer = Lexer::new(input);
@@ -162,10 +162,10 @@ mod tests {
     fn test_parse_while_loop_with_if_and_assignment() {
         let input = "while (true) { 
                         if (a == 5) {
-                            return 5; 
+                            return 5
                         }
-                        a = a + 1;
-                    }";
+                        a = a + 1
+                    }\n";
 
         let lexer = Lexer::new(input);
         let mut parser = Parser::new(lexer);
@@ -286,8 +286,8 @@ mod tests {
     #[test]
     fn test_boolean_literals() {
         let input = "
-        false;
-        true;
+        false
+        true
         ";
 
         let lexer = Lexer::new(input);
@@ -321,7 +321,7 @@ mod tests {
     #[test]
     fn test_string_literals() {
         let input = "
-        \"Hola\";
+        \"Hola\"
         \"mundo\"
         ";
 
@@ -354,7 +354,7 @@ mod tests {
     }
     #[test]
     fn test_prefix_expressions() {
-        let prefix_tests = vec![("-5", "-", 5), ("!5", "!", 5)];
+        let prefix_tests = vec![("-5\n", "-", 5), ("!5\n", "!", 5)];
 
         for (input, operator, value) in prefix_tests {
             let lexer = Lexer::new(input);
@@ -400,7 +400,7 @@ mod tests {
 
     #[test]
     fn test_infix_expressions() {
-        let infix_tests = vec![("6-5", "-", 6, 5), ("10*5", "*", 10, 5)];
+        let infix_tests = vec![("6-5\n", "-", 6, 5), ("10*5\n", "*", 10, 5)];
 
         for (input, operator, left_value, right_value) in infix_tests {
             let lexer = Lexer::new(input);
@@ -460,40 +460,34 @@ mod tests {
     #[test]
     fn test_operator_precedence_parsing() {
         let tests = vec![
-            ("-a * b", "((-a) * b);"),
-            ("!-a", "(!(-a));"),
-            ("a + b + c", "((a + b) + c);"),
-            ("a + b - c", "((a + b) - c);"),
-            ("a * b * c", "((a * b) * c);"),
-            ("a * b / c", "((a * b) / c);"),
-            ("a + b / c", "(a + (b / c));"),
-            ("a + b * c + d / e - f", "(((a + (b * c)) + (d / e)) - f);"),
-            ("3 + 4; -5 * 5", "(3 + 4);\n((-5) * 5);"),
-            ("5 > 4 == 3 < 4", "((5 > 4) == (3 < 4));"),
-            ("5 < 4 != 3 > 4", "((5 < 4) != (3 > 4));"),
+            ("-a * b", "((-a) * b)"),
+            ("!-a", "(!(-a))"),
+            ("a + b + c", "((a + b) + c)"),
+            ("a + b - c", "((a + b) - c)"),
+            ("a * b * c", "((a * b) * c)"),
+            ("a * b / c", "((a * b) / c)"),
+            ("a + b / c", "(a + (b / c))"),
+            ("a + b * c + d / e - f", "(((a + (b * c)) + (d / e)) - f)"),
+            ("3 + 4\n-5 * 5", "(3 + 4)\n((-5) * 5)"),
+            ("5 > 4 == 3 < 4", "((5 > 4) == (3 < 4))"),
+            ("5 < 4 != 3 > 4", "((5 < 4) != (3 > 4))"),
             (
                 "3 + 4 * 5 == 3 * 1 + 4 * 5",
-                "((3 + (4 * 5)) == ((3 * 1) + (4 * 5)));",
+                "((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))",
             ),
-            ("true", "true;"),
-            ("false", "false;"),
-            ("3 > 5 == false", "((3 > 5) == false);"),
-            ("3 < 5 == true", "((3 < 5) == true);"),
-            ("1 + (2 + 3) + 4", "((1 + (2 + 3)) + 4);"),
-            ("(5 + 5) * 2", "((5 + 5) * 2);"),
-            ("2 / (5 + 5)", "(2 / (5 + 5));"),
-            ("-(5 + 5)", "(-(5 + 5));"),
-            ("!(true == true)", "(!(true == true));"),
+            ("true", "true"),
+            ("false", "false"),
+            ("3 > 5 == false", "((3 > 5) == false)"),
+            ("3 < 5 == true", "((3 < 5) == true)"),
+            ("1 + (2 + 3) + 4", "((1 + (2 + 3)) + 4)"),
+            ("(5 + 5) * 2", "((5 + 5) * 2)"),
+            ("2 / (5 + 5)", "(2 / (5 + 5))"),
+            ("-(5 + 5)", "(-(5 + 5))"),
+            ("!(true == true)", "(!(true == true))"),
         ];
 
         for (input, expected) in tests {
-            let lexer = Lexer::new(input);
-            let mut parser = Parser::new(lexer);
-            let program = parser.parse_program();
-            check_parser_errors(&parser);
-
-            let actual = program.to_string();
-            check_parse_expression_statement(&actual, expected);
+            check_parse_expression_statement(&input, expected);
         }
     }
 
@@ -501,14 +495,14 @@ mod tests {
     fn test_if_expression_with_multiple_statements() {
         let input = r#"
         if (x < y) {
-            let a = 5;
-            a;
+            let a = 5
+            a
         } else {
-            let b = 10;
-            b;
+            let b = 10
+            b
         }
         "#;
-        let expected = "if (x < y) { let a = 5;\na; } else { let b = 10;\nb; }";
+        let expected = "if (x < y) {\nlet a = 5\na\n} else {\nlet b = 10\nb\n}";
         check_parse_expression_statement(input, expected);
     }
 
@@ -516,11 +510,11 @@ mod tests {
     fn test_if_expression_without_alternative() {
         let input = r#"
         if (x < y) {
-            let a = 5;
-            a;
+            let a = 5
+            a
         }
         "#;
-        let expected = "if (x < y) { let a = 5;\na; }";
+        let expected = "if (x < y) {\nlet a = 5\na\n}";
         check_parse_expression_statement(input, expected);
     }
 
@@ -536,43 +530,43 @@ mod tests {
 
     #[test]
     fn test_function_literal() {
-        let input = "fn(x, y) { return 1; }";
-        let expected = "fn(x, y){return 1;}";
+        let input = "fn(x,\n y) { return 1\n }\n";
+        let expected = "fn(x, y) {\nreturn 1\n}";
         check_parse_expression_statement(input, expected);
     }
 
     #[test]
     fn test_function_literal_no_arguments() {
-        let input = "fn() { return 1; }";
-        let expected = "fn(){return 1;}";
+        let input = "fn() { return 1\n }";
+        let expected = "fn() {\nreturn 1\n}";
         check_parse_expression_statement(input, expected);
     }
 
     #[test]
     fn test_function_literal_with_multiple_statements() {
-        let input = "fn(x) { let y = x + 1; return y; }";
-        let expected = "fn(x){let y = (x + 1);\nreturn y;}";
+        let input = "fn(x) { let y = x + 1\n return y\n }\n";
+        let expected = "fn(x) {\nlet y = (x + 1)\nreturn y\n}";
         check_parse_expression_statement(input, expected);
     }
 
     #[test]
     fn test_call_expression() {
-        let input = "add(1, 2 * 3, 4 + 5);";
-        let expected = "add(1, (2 * 3), (4 + 5));";
+        let input = "add(1, 2 * 3, 4 + 5)\n";
+        let expected = "add(1, (2 * 3), (4 + 5))";
         check_parse_expression_statement(input, expected);
     }
 
     #[test]
     fn test_call_expression_no_arguments() {
-        let input = "doSomething();";
-        let expected = "doSomething();";
+        let input = "doSomething()";
+        let expected = "doSomething()";
         check_parse_expression_statement(input, expected);
     }
 
     #[test]
     fn test_call_expression_with_function_literal() {
-        let input = "callFunction(fn(x) { return x + 1; }, 5);";
-        let expected = "callFunction(fn(x){return (x + 1);}, 5);";
+        let input = "callFunction(fn(x) { return x + 1\n }, 5)\n";
+        let expected = "callFunction(fn(x) {\nreturn (x + 1)\n}, 5)";
         check_parse_expression_statement(input, expected);
     }
 }

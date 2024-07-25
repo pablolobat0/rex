@@ -98,8 +98,8 @@ impl<'a> Parser<'a> {
 
     fn peek_error(&mut self, expected_token: TokenType) {
         let message = format!(
-            "Expected next token to be {}, got {} instead",
-            expected_token, self.peek_token.kind
+            "Expected next token to be {}, got {} with lexeme {} instead",
+            expected_token, self.peek_token.kind, self.peek_token.lexeme
         );
         self.add_error(message, self.peek_token.line);
     }
@@ -131,12 +131,24 @@ impl<'a> Parser<'a> {
 
     // <statement> ::= <let_statement> | <return_statement> | <expression_statement>
     fn parse_statement(&mut self) -> Option<Statement> {
-        match self.current_token.kind {
+        while self.current_token_is(TokenType::NewLine) {
+            self.next_token();
+        }
+
+        let statement = match self.current_token.kind {
             TokenType::Let => self.parse_let_statement(),
             TokenType::Return => self.parse_return_statement(),
             TokenType::While => self.parse_while_statement(),
             _ => self.parse_expression_statement().map(Statement::Expression),
+        };
+
+        if self.peek_token_is(TokenType::EOF) {
+            return statement;
+        } else if !self.expect_peek(TokenType::NewLine) {
+            return None;
         }
+
+        statement
     }
 
     // let <identifier> = <expression>
@@ -155,8 +167,8 @@ impl<'a> Parser<'a> {
         if !self.expect_peek(TokenType::Equal) {
             return None;
         }
-
-        self.next_token(); // Skip =
+        // Consume =
+        self.next_token();
 
         let value = match self.parse_expression(Precedence::Lowest) {
             Some(expr) => expr,
@@ -164,11 +176,6 @@ impl<'a> Parser<'a> {
                 return None;
             }
         };
-
-        // The semicolon is optional to improve REPL experience
-        while !self.current_token_is(TokenType::Semicolon) {
-            self.next_token();
-        }
 
         Some(Statement::Let(LetStatement::new(
             let_token, identifier, value,
@@ -188,11 +195,6 @@ impl<'a> Parser<'a> {
             }
         };
 
-        // The semicolon is optional to improve REPL experience
-        while !self.current_token_is(TokenType::Semicolon) {
-            self.next_token();
-        }
-
         Some(Statement::Return(ReturnStatement::new(token, value)))
     }
 
@@ -209,9 +211,6 @@ impl<'a> Parser<'a> {
 
         let body = self.parse_block_statement();
 
-        // Skip right brace
-        self.next_token();
-
         Some(Statement::While(WhileStatement::new(
             token, condition?, body,
         )))
@@ -225,19 +224,13 @@ impl<'a> Parser<'a> {
                 return None;
             }
         };
-        let expression_statement = Some(ExpressionStatement::new(token, expression));
 
-        // The semicolon is optional to improve REPL experience
-        if self.peek_token.kind == TokenType::Semicolon {
-            self.next_token();
-        }
-
-        return expression_statement;
+        Some(ExpressionStatement::new(token, expression))
     }
 
     fn expect_peek(&mut self, token: TokenType) -> bool {
         if self.peek_token.kind == token {
-            self.next_token(); // Skip token
+            self.next_token(); // Consume token
             true
         } else {
             self.peek_error(token);
@@ -269,7 +262,7 @@ impl<'a> Parser<'a> {
             }
         };
 
-        while !self.current_token_is(TokenType::Semicolon) && precedence < self.peek_precedence() {
+        while !self.current_token_is(TokenType::NewLine) && precedence < self.peek_precedence() {
             self.next_token(); // skip token
             let infix_fn = match self.infix_parse_fns.get(&self.current_token.kind) {
                 Some(infix_fn) => infix_fn,
@@ -471,7 +464,7 @@ fn parse_function_literal(parser: &mut Parser<'_>) -> Option<Expression> {
     }
 
     let parameters = match parse_parameters(parser) {
-        Some(arguments) => arguments,
+        Some(parameters) => parameters,
         None => return None,
     };
 
@@ -504,10 +497,14 @@ fn parse_parameters(parser: &mut Parser<'_>) -> Option<Vec<Identifier>> {
     arguments.push(identifier);
 
     while parser.peek_token.kind == TokenType::Comma {
-        // Skip identifier
+        // Consume identifier
         parser.next_token();
-        // Skip comma
+        // Consume comma
         parser.next_token();
+        // Consume optional new line between parameters
+        if parser.current_token_is(TokenType::NewLine) {
+            parser.next_token();
+        }
         let identifier = Identifier::new(
             parser.current_token.clone(),
             parser.current_token.lexeme.clone(),
@@ -552,7 +549,7 @@ fn parse_infix_expression(parser: &mut Parser<'_>, left: Expression) -> Option<E
 }
 
 fn parse_grouped_expression(parser: &mut Parser<'_>) -> Option<Expression> {
-    parser.next_token(); // Skip left parenthesis
+    parser.next_token(); // Consume left parenthesis
     let expression = parser.parse_expression(Precedence::Lowest);
     if !parser.expect_peek(TokenType::RightParen) {
         return None;
@@ -589,10 +586,14 @@ fn parse_arguments(parser: &mut Parser<'_>) -> Option<Vec<Expression>> {
     }
 
     while parser.peek_token.kind == TokenType::Comma {
-        // Skip argument
+        // Consume argument
         parser.next_token();
-        // Skip comma
+        // Consume comma
         parser.next_token();
+        // Consume optional new line between arguments
+        if parser.current_token_is(TokenType::NewLine) {
+            parser.next_token();
+        }
         match parser.parse_expression(Precedence::Lowest) {
             Some(argument) => arguments.push(argument),
             None => return None,
