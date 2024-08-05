@@ -139,8 +139,13 @@ impl<'a> Lexer<'a> {
                 Token::new(TokenType::Comma, ",".to_string(), self.line)
             }
             Some('.') => {
+                let start_position = self.position;
                 self.read_char();
-                Token::new(TokenType::Dot, ".".to_string(), self.line)
+                if self.current_char.unwrap().is_digit(10) {
+                    return self.read_float(start_position);
+                } else {
+                    Token::new(TokenType::Dot, ".".to_string(), self.line)
+                }
             }
             Some('?') => {
                 self.read_char();
@@ -248,7 +253,10 @@ impl<'a> Lexer<'a> {
         let start_position = self.position;
 
         while let Some(c) = self.current_char {
-            if !c.is_digit(10) {
+            if c == '.' {
+                self.read_char();
+                return self.read_float(start_position);
+            } else if !c.is_digit(10) {
                 break;
             }
             self.read_char();
@@ -257,6 +265,19 @@ impl<'a> Lexer<'a> {
         let lexeme: String = self.input[start_position..self.position].to_string();
 
         Token::new(TokenType::Integer, lexeme, self.line)
+    }
+
+    fn read_float(&mut self, start_position: usize) -> Token {
+        while let Some(c) = self.current_char {
+            if !c.is_digit(10) {
+                break;
+            }
+            self.read_char();
+        }
+
+        let lexeme: String = self.input[start_position..self.position].to_string();
+
+        Token::new(TokenType::Float, lexeme, self.line)
     }
 
     fn read_string(&mut self) -> Token {

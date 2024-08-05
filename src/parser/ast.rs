@@ -1,5 +1,3 @@
-use std::fmt::format;
-
 use crate::lexer::token::Token;
 
 pub enum Node {
@@ -62,6 +60,7 @@ impl Program {
 pub enum Expression {
     Identifier(Identifier),
     Integer(IntegerLiteral),
+    Float(FloatLiteral),
     Boolean(BooleanLiteral),
     String(StringLiteral),
     Prefix(PrefixExpression),
@@ -76,6 +75,7 @@ impl Expression {
         match self {
             Expression::Identifier(identifier) => identifier.get_lexeme(),
             Expression::Integer(integer) => integer.get_lexeme(),
+            Expression::Float(float) => float.get_lexeme(),
             Expression::Boolean(boolean) => boolean.get_lexeme(),
             Expression::String(string) => string.get_lexeme(),
             Expression::Prefix(prefix_expression) => prefix_expression.get_lexeme(),
@@ -90,6 +90,7 @@ impl Expression {
         match self {
             Expression::Identifier(identifier) => identifier.to_string(),
             Expression::Integer(integer) => integer.to_string(),
+            Expression::Float(float) => float.to_string(),
             Expression::Boolean(boolean) => boolean.to_string(),
             Expression::String(string) => string.to_string(),
             Expression::Prefix(prefix_expression) => prefix_expression.to_string(),
@@ -144,6 +145,25 @@ impl IntegerLiteral {
 pub struct BooleanLiteral {
     token: Token,
     pub value: bool,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct FloatLiteral {
+    token: Token,
+    pub value: f64,
+}
+
+impl FloatLiteral {
+    pub fn get_lexeme(&self) -> String {
+        self.token.lexeme.clone()
+    }
+
+    pub fn to_string(&self) -> String {
+        self.token.lexeme.clone()
+    }
+    pub fn new(token: Token, value: f64) -> FloatLiteral {
+        FloatLiteral { token, value }
+    }
 }
 
 impl BooleanLiteral {
@@ -454,6 +474,7 @@ impl ExpressionStatement {
         match &self.expression {
             Expression::Identifier(identifier) => identifier.to_string(),
             Expression::Integer(integer) => integer.to_string(),
+            Expression::Float(float) => float.to_string(),
             Expression::Boolean(boolean) => boolean.to_string(),
             Expression::String(string) => string.to_string(),
             Expression::Prefix(prefix_expression) => prefix_expression.to_string(),

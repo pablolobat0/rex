@@ -26,6 +26,15 @@ mod test {
     }
 
     #[test]
+    fn test_eval_float_literal() {
+        let test = vec![("0.55", 0.55), (".565", 0.565)];
+        for (input, expected) in test {
+            let result = test_eval(input);
+            assert_eq!(result, Object::Float(expected));
+        }
+    }
+
+    #[test]
     fn test_eval_boolean_literal() {
         let test = vec![("true\n", true), ("false\n", false)];
         for (input, expected) in test {
@@ -60,6 +69,14 @@ mod test {
         }
     }
     #[test]
+    fn test_eval_float_minus_prefix_expression() {
+        let test = vec![("-3.14", -3.14), ("-.3", -0.3)];
+        for (input, expected) in test {
+            let result = test_eval(input);
+            assert_eq!(result, Object::Float(expected));
+        }
+    }
+    #[test]
     fn test_eval_integer_infix_expressions() {
         let test = vec![
             ("10-5\n", 5),
@@ -91,6 +108,41 @@ mod test {
             assert_eq!(result, Object::Boolean(expected));
         }
     }
+
+    #[test]
+    fn test_eval_float_infix_expressions() {
+        let test = vec![
+            ("10.5+5.65", 16.15),
+            ("7.5-7", 0.5),
+            ("0.5*7", 3.5),
+            ("11/10", 1.1),
+            ("10.5/2", 5.25),
+        ];
+        for (input, expected) in test {
+            let result = test_eval(input);
+            assert_eq!(result, Object::Float(expected));
+        }
+        let test = vec![
+            ("10.5==5.5", false),
+            ("10.5==10.5", true),
+            ("77.4!=80.7", true),
+            ("77.4!=77.4", false),
+            ("21.4>20.55", true),
+            ("21.34>22.5", false),
+            ("21.23>=21.23", true),
+            ("21.13>=22.32", false),
+            ("19.2343<20.34", true),
+            ("21.314<20.33", false),
+            ("20.12<=20.12", true),
+            ("21.234<=20.234", false),
+            ("21.1243>20.2432", true),
+        ];
+        for (input, expected) in test {
+            let result = test_eval(input);
+            assert_eq!(result, Object::Boolean(expected));
+        }
+    }
+
     #[test]
     fn test_eval_boolean_infix_expressions() {
         let test = vec![

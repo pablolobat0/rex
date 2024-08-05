@@ -35,6 +35,7 @@ fn eval_program_statements(statements: Vec<Statement>, environment: &mut Environ
 fn eval_expression(expression: Expression, environment: &mut Environment) -> Object {
     match expression {
         Expression::Integer(integer) => Object::Integer(integer.value),
+        Expression::Float(float) => Object::Float(float.value),
         Expression::Identifier(identifier) => eval_identifier(identifier, environment),
         Expression::Boolean(boolean) => eval_boolean(boolean.value),
         Expression::String(string) => Object::String(string.value),
@@ -148,6 +149,7 @@ fn eval_bang_operator(object: Object) -> Object {
 fn eval_minus_prefix_operator(object: Object) -> Object {
     match object {
         Object::Integer(value) => Object::Integer(-value),
+        Object::Float(value) => Object::Float(-value),
         _ => Object::Error(format!(
             "type mismatch, expected an INTEGER but found {}",
             object.object_type()
@@ -159,6 +161,15 @@ fn eval_infix_expression(left: Object, operator: &str, right: Object) -> Object 
     match (left, right) {
         (Object::Integer(left_value), Object::Integer(right_value)) => {
             eval_integer_infix_expression(left_value, operator, right_value)
+        }
+        (Object::Float(left_value), Object::Float(right_value)) => {
+            eval_float_infix_expression(left_value, operator, right_value)
+        }
+        (Object::Integer(left_value), Object::Float(right_value)) => {
+            eval_float_infix_expression(left_value as f64, operator, right_value)
+        }
+        (Object::Float(left_value), Object::Integer(right_value)) => {
+            eval_float_infix_expression(left_value, operator, right_value as f64)
         }
         (Object::Boolean(left_value), Object::Boolean(right_value)) => {
             eval_boolean_infix_expression(left_value, operator, right_value)
@@ -183,7 +194,34 @@ fn eval_integer_infix_expression(left_value: i64, operator: &str, right_value: i
         "*" => Object::Integer(left_value * right_value),
         "/" => {
             if right_value != 0 {
-                Object::Integer(left_value / right_value)
+                let result = left_value as f64 / right_value as f64;
+                if result.fract() == 0.0 {
+                    Object::Integer(result as i64)
+                } else {
+                    Object::Float(result)
+                }
+            } else {
+                Object::Error(format!("error division by 0"))
+            }
+        }
+        "==" => eval_boolean(left_value == right_value),
+        "!=" => eval_boolean(left_value != right_value),
+        ">" => eval_boolean(left_value > right_value),
+        ">=" => eval_boolean(left_value >= right_value),
+        "<" => eval_boolean(left_value < right_value),
+        "<=" => eval_boolean(left_value <= right_value),
+        _ => Object::Error(format!("unknow operator: {}", operator)),
+    }
+}
+
+fn eval_float_infix_expression(left_value: f64, operator: &str, right_value: f64) -> Object {
+    match operator {
+        "+" => Object::Float(left_value + right_value),
+        "-" => Object::Float(left_value - right_value),
+        "*" => Object::Float(left_value * right_value),
+        "/" => {
+            if right_value != 0.0 {
+                Object::Float(left_value / right_value)
             } else {
                 Object::Error(format!("error division by 0"))
             }

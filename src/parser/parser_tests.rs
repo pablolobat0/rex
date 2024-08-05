@@ -158,6 +158,38 @@ mod tests {
             _ => panic!("stmt is not an ExpressionStatement. Got={:?}", stmt),
         }
     }
+
+    #[test]
+    fn test_float_literal() {
+        let input = "
+            3.1416
+            0.7835
+        ";
+
+        let lexer = Lexer::new(input);
+        let mut parser = Parser::new(lexer);
+
+        let program = parser.parse_program();
+        check_parser_errors(&parser);
+
+        assert_eq!(program.statements.len(), 2);
+
+        let expected_values = vec!["3.1416", "0.7835"];
+
+        for (i, expected_value) in expected_values.iter().enumerate() {
+            let stmt = &program.statements[i];
+            match stmt {
+                Statement::Expression(expression_stmt) => match &expression_stmt.expression {
+                    Expression::Float(float) => {
+                        assert_eq!(float.get_lexeme(), expected_value.to_string());
+                    }
+                    _ => panic!("stmt is not an Float Literal. Got={:?}", stmt),
+                },
+                _ => panic!("stmt is not an ExpressionStatement. Got={:?}", stmt),
+            }
+        }
+    }
+
     #[test]
     fn test_parse_while_loop_with_if_and_assignment() {
         let input = "while (true) { 

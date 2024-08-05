@@ -7,6 +7,7 @@ use crate::parser::ast::{BlockStatement, Identifier};
 #[derive(Debug, PartialEq, Clone)]
 pub enum Object {
     Integer(i64),
+    Float(f64),
     Boolean(bool),
     String(String),
     Return(Box<Object>),
@@ -19,6 +20,7 @@ impl Object {
     pub fn to_string(&self) -> String {
         match self {
             Object::Integer(integer) => integer.to_string(),
+            Object::Float(float) => float.to_string(),
             Object::Boolean(boolean) => boolean.to_string(),
             Object::String(string) => string.to_string(),
             Object::Return(return_object) => return_object.to_string(),
@@ -31,6 +33,7 @@ impl Object {
     pub fn object_type(&self) -> String {
         match self {
             Object::Integer(_) => "INTEGER".to_string(),
+            Object::Float(_) => "FLOAT".to_string(),
             Object::Boolean(_) => "BOOLEAN".to_string(),
             Object::String(_) => "STRING".to_string(),
             Object::Return(_) => "RETURN".to_string(),

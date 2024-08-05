@@ -32,6 +32,7 @@ pub enum TokenType {
     Identifier,
     String,
     Integer,
+    Float,
     // Keywords
     Let,
     Function,
@@ -60,6 +61,7 @@ impl fmt::Display for TokenType {
             TokenType::Identifier => "Identifier",
             TokenType::String => "String",
             TokenType::Integer => "Integer",
+            TokenType::Float => "Float",
             TokenType::Plus => "+",
             TokenType::Minus => "-",
             TokenType::Star => "*",

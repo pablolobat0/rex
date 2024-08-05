@@ -6,7 +6,7 @@ use crate::lexer::{
 use crate::parser::ast::Identifier;
 
 use super::ast::{
-    BlockStatement, BooleanLiteral, CallExpression, Expression, ExpressionStatement,
+    BlockStatement, BooleanLiteral, CallExpression, Expression, ExpressionStatement, FloatLiteral,
     FunctionLiteral, IfExpression, InfixExpression, IntegerLiteral, LetStatement, PrefixExpression,
     Program, ReturnStatement, Statement, StringLiteral, WhileStatement,
 };
@@ -58,6 +58,7 @@ impl<'a> Parser<'a> {
         // Infix functions
         parser.register_prefix(TokenType::Identifier, parse_identifier);
         parser.register_prefix(TokenType::Integer, parse_integer_literal);
+        parser.register_prefix(TokenType::Float, parse_float_literal);
         parser.register_prefix(TokenType::True, parse_boolean_literal);
         parser.register_prefix(TokenType::False, parse_boolean_literal);
         parser.register_prefix(TokenType::String, parse_string_literal);
@@ -366,6 +367,24 @@ fn parse_integer_literal(parser: &mut Parser<'_>) -> Option<Expression> {
     };
 
     Some(Expression::Integer(IntegerLiteral::new(
+        parser.current_token.clone(),
+        value,
+    )))
+}
+
+fn parse_float_literal(parser: &mut Parser<'_>) -> Option<Expression> {
+    let value = match parser.current_token.lexeme.parse::<f64>() {
+        Ok(num) => num,
+        Err(_) => {
+            parser.add_error(
+                format!("could not parse {} as float", parser.current_token.lexeme),
+                parser.current_token.line,
+            );
+            return None;
+        }
+    };
+
+    Some(Expression::Float(FloatLiteral::new(
         parser.current_token.clone(),
         value,
     )))

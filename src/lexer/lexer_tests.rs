@@ -21,6 +21,8 @@ mod tests {
                     dos líneas */
                     2
                     let café = 42
+                    3.14
+                    .14
             ";
 
         let expected_tokens = vec![
@@ -77,6 +79,10 @@ mod tests {
             Token::new(TokenType::Equal, "=".to_string(), 16),
             Token::new(TokenType::Integer, "42".to_string(), 16),
             Token::new(TokenType::NewLine, "\n".to_string(), 16),
+            Token::new(TokenType::Float, "3.14".to_string(), 17),
+            Token::new(TokenType::NewLine, "\n".to_string(), 17),
+            Token::new(TokenType::Float, ".14".to_string(), 18),
+            Token::new(TokenType::NewLine, "\n".to_string(), 18),
         ];
 
         test_lexer(input, expected_tokens);
