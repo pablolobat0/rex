@@ -1,4 +1,4 @@
-use crate::lexer::token::{Token, TokenType};
+use crate::common::lexer::token::{Token, TokenType};
 use std::collections::HashMap;
 use std::str::Chars;
 

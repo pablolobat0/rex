@@ -1,10 +1,10 @@
-use crate::lexer::lexer::Lexer;
-use crate::lexer::token::{Token, TokenType};
-use crate::parser::ast::{
+use crate::common::lexer::lexer::Lexer;
+use crate::common::lexer::token::{Token, TokenType};
+use crate::interpreter::parser::ast::{
     Expression, ExpressionStatement, Identifier, InfixExpression, IntegerLiteral, LetStatement,
     Node, PrefixExpression, Program, Statement,
 };
-use crate::parser::parser::Parser;
+use crate::interpreter::parser::parser::Parser;
 
 #[cfg(test)]
 mod tests {

@@ -1,9 +1,8 @@
 use repl::start;
 use std::env;
 
-mod evaluator;
-mod lexer;
-mod parser;
+mod common;
+mod interpreter;
 mod repl;
 
 fn main() {

@@ -1,7 +1,7 @@
 use crate::{
-    evaluator::{evaluator::eval, object::Environment},
-    lexer::lexer::Lexer,
-    parser::{ast::Node, parser::Parser},
+    common::lexer::lexer::Lexer,
+    interpreter::evaluator::{evaluator::eval, object::Environment},
+    interpreter::parser::{ast::Node, parser::Parser},
 };
 use std::io::{self, Write};
 

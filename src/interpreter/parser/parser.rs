@@ -1,9 +1,9 @@
-use crate::lexer::{
+use crate::common::lexer::{
     lexer::Lexer,
     token::{Token, TokenType},
 };
 
-use crate::parser::ast::Identifier;
+use crate::interpreter::parser::ast::Identifier;
 
 use super::ast::{
     BlockStatement, BooleanLiteral, CallExpression, Expression, ExpressionStatement, FloatLiteral,

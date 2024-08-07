@@ -1,7 +1,9 @@
 use std::{cell::RefCell, rc::Rc};
 
 use super::object::{Environment, Function, Object};
-use crate::parser::ast::{Expression, Identifier, IfExpression, Node, Statement, WhileStatement};
+use crate::interpreter::parser::ast::{
+    Expression, Identifier, IfExpression, Node, Statement, WhileStatement,
+};
 
 // Only need to be instantiated once
 const TRUE: Object = Object::Boolean(true);

@@ -1,4 +1,4 @@
-use crate::lexer::token::Token;
+use crate::common::lexer::token::Token;
 
 pub enum Node {
     Program(Program),
