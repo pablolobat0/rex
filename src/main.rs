@@ -4,6 +4,7 @@ use std::env;
 mod common;
 mod interpreter;
 mod repl;
+mod vm;
 
 fn main() {
     let username = match env::var("USER") {
