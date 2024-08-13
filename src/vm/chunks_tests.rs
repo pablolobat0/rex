@@ -11,6 +11,6 @@ mod test {
         let code = vec![OpCode::Constant(constant as u8)];
 
         assert_eq!(chunk.get(constant), code.get(constant));
-        assert_eq!(chunk.get_line(constant), Option::Some(1).as_ref());
+        assert_eq!(chunk.get_line(constant), Option::Some(1));
     }
 }
