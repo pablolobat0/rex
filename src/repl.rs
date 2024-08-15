@@ -3,12 +3,22 @@ use crate::{
     interpreter::evaluator::{evaluator::eval, object::Environment},
     interpreter::parser::{ast::Node, parser::Parser},
 };
+use std::env;
 use std::io::{self, Write};
 
 const PROMPT: &str = "> ";
 const EXIT_COMMAND: &str = "exit";
 
-pub fn start() {
+pub fn start_ast() {
+    let username = match env::var("USER") {
+        Ok(val) => val,
+        Err(_) => match env::var("USERNAME") {
+            Ok(val) => val,
+            Err(_) => "Usuario desconocido".to_string(),
+        },
+    };
+    println!("Hola, {}! Bienvenido al intérprete.", username);
+
     let mut environment = Environment::new();
     loop {
         let mut input = String::new();
