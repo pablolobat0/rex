@@ -1,14 +1,20 @@
-use super::value::{Value, ValueArray};
-
 #[derive(Debug, PartialEq)]
 pub enum OpCode {
-    Constant(u8),
+    Constant(usize),
+    Negate,
+    Add,
+    Subtract,
+    Multiply,
+    Divide,
+    Return,
 }
+
+pub type Value = f64;
 
 #[derive(Debug)]
 pub struct Chunk {
-    code: Vec<OpCode>,
-    constants: ValueArray,
+    pub code: Vec<OpCode>,
+    pub constants: Vec<Value>,
     lines: Vec<(usize, usize)>,
 }
 
@@ -16,7 +22,7 @@ impl Chunk {
     pub fn new() -> Chunk {
         Chunk {
             code: vec![],
-            constants: ValueArray::new(),
+            constants: vec![],
             lines: vec![],
         }
     }
