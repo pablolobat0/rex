@@ -1,8 +1,14 @@
 #[cfg(test)]
 mod test {
-    use crate::vm::{
-        chunk::{Chunk, OpCode},
-        vm::{InterpretResult, VirtualMachine},
+    use std::{cell::RefCell, rc::Rc};
+
+    use crate::{
+        common::lexer::lexer::Lexer,
+        vm::{
+            chunk::{Chunk, OpCode},
+            compiler::Parser,
+            vm::{InterpretResult, VirtualMachine},
+        },
     };
 
     #[test]
@@ -23,7 +29,9 @@ mod test {
         let constant = chunk.add_constant(1.2);
         chunk.write(OpCode::Constant(constant), 1);
         chunk.write(OpCode::Negate, 1);
-        let mut vm = VirtualMachine::new(&chunk);
+        let mut lexer = Lexer::new("");
+        let mut parser = Parser::new(&mut lexer);
+        let mut vm = VirtualMachine::new(&mut parser);
 
         assert_eq!(vm.interpret(), InterpretResult::Ok);
         assert_eq!(vm.stack.get(0), Some(-1.2).as_ref());
@@ -37,7 +45,9 @@ mod test {
         let constant = chunk.add_constant(10.0);
         chunk.write(OpCode::Constant(constant), 1);
         chunk.write(OpCode::Add, 1);
-        let mut vm = VirtualMachine::new(&chunk);
+        let mut lexer = Lexer::new("");
+        let mut parser = Parser::new(&mut lexer);
+        let mut vm = VirtualMachine::new(&mut parser);
 
         assert_eq!(vm.interpret(), InterpretResult::Ok);
         assert_eq!(vm.stack.get(0), Some(15.0).as_ref());
@@ -50,7 +60,9 @@ mod test {
         let constant = chunk.add_constant(10.0);
         chunk.write(OpCode::Constant(constant), 1);
         chunk.write(OpCode::Subtract, 1);
-        let mut vm = VirtualMachine::new(&chunk);
+        let mut lexer = Lexer::new("");
+        let mut parser = Parser::new(&mut lexer);
+        let mut vm = VirtualMachine::new(&mut parser);
 
         assert_eq!(vm.interpret(), InterpretResult::Ok);
         assert_eq!(vm.stack.get(0), Some(5.0).as_ref());
@@ -63,7 +75,9 @@ mod test {
         let constant = chunk.add_constant(10.0);
         chunk.write(OpCode::Constant(constant), 1);
         chunk.write(OpCode::Multiply, 1);
-        let mut vm = VirtualMachine::new(&chunk);
+        let mut lexer = Lexer::new("");
+        let mut parser = Parser::new(&mut lexer);
+        let mut vm = VirtualMachine::new(&mut parser);
 
         assert_eq!(vm.interpret(), InterpretResult::Ok);
         assert_eq!(vm.stack.get(0), Some(50.0).as_ref());
@@ -76,7 +90,9 @@ mod test {
         let constant = chunk.add_constant(10.0);
         chunk.write(OpCode::Constant(constant), 1);
         chunk.write(OpCode::Divide, 1);
-        let mut vm = VirtualMachine::new(&chunk);
+        let mut lexer = Lexer::new("");
+        let mut parser = Parser::new(&mut lexer);
+        let mut vm = VirtualMachine::new(&mut parser);
 
         assert_eq!(vm.interpret(), InterpretResult::Ok);
         assert_eq!(vm.stack.get(0), Some(2.0).as_ref());
@@ -89,7 +105,9 @@ mod test {
         let constant = chunk.add_constant(10.0);
         chunk.write(OpCode::Constant(constant), 1);
         chunk.write(OpCode::Divide, 1);
-        let mut vm = VirtualMachine::new(&chunk);
+        let mut lexer = Lexer::new("");
+        let mut parser = Parser::new(&mut lexer);
+        let mut vm = VirtualMachine::new(&mut parser);
 
         assert_eq!(vm.interpret(), InterpretResult::RuntimeError);
     }

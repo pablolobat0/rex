@@ -1,10 +1,17 @@
-use super::chunk::{Chunk, OpCode, Value};
+use std::{borrow::BorrowMut, cell::RefCell, rc::Rc};
+
+use crate::common::lexer::lexer::Lexer;
+
+use super::{
+    chunk::{Chunk, OpCode, Value},
+    compiler::Parser,
+};
 
 #[derive(Debug)]
 pub struct VirtualMachine<'a> {
-    chunk: &'a Chunk,
     pc: usize,
     pub stack: Vec<Value>,
+    parser: &'a mut Parser<'a>,
 }
 
 #[derive(Debug, PartialEq)]
@@ -15,23 +22,32 @@ pub enum InterpretResult {
 }
 
 impl<'a> VirtualMachine<'a> {
-    pub fn new(chunk: &Chunk) -> VirtualMachine {
+    pub fn new(parser: &'a mut Parser<'a>) -> VirtualMachine {
         VirtualMachine {
-            chunk,
             pc: 0,
             stack: vec![],
+            parser,
         }
+    }
+    pub fn compile_and_run(&mut self) -> InterpretResult {
+        if !self.parser.compile() {
+            return InterpretResult::CompileError;
+        }
+        // Luego, creamos una VirtualMachine y ejecutamos el Chunk
+        self.interpret()
     }
 
     pub fn interpret(&mut self) -> InterpretResult {
         loop {
             // Gets next OpCode using current PC
-            let instruction = self.chunk.get(self.pc);
+            let instruction = self.parser.current_chunk.get(self.pc);
             self.pc += 1; // Increases current PC for next instruction
             match instruction {
                 Some(instruction) => match instruction {
                     OpCode::Constant(index) => {
-                        if let Some(constant) = self.read_constant(*index).cloned() {
+                        if let Some(constant) =
+                            self.parser.current_chunk.get_constant(*index).cloned()
+                        {
                             println!("Executing Constant with value: {}", constant);
                             self.stack.push(constant);
                         } else {
@@ -80,11 +96,5 @@ impl<'a> VirtualMachine<'a> {
         }
 
         InterpretResult::Ok
-    }
-
-    fn read_constant(&mut self, index: usize) -> Option<&Value> {
-        let constant = self.chunk.constants.get(index);
-
-        constant
     }
 }
