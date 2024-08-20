@@ -45,6 +45,9 @@ impl<'a> Parser<'a> {
         // Prefix functions
         parser.register_prefix(TokenType::Integer, number);
         parser.register_prefix(TokenType::Float, number);
+        parser.register_prefix(TokenType::True, literal);
+        parser.register_prefix(TokenType::False, literal);
+        parser.register_prefix(TokenType::Null, literal);
         parser.register_prefix(TokenType::Minus, prefix_expression);
         // Infix functions
         parser.register_infix(TokenType::Plus, infix_expression);
@@ -152,6 +155,15 @@ fn number(parser: &mut Parser) {
     );
     let index = parser.current_chunk.add_constant(value);
     parser.emit_bytecode(OpCode::Constant(index));
+}
+
+fn literal(parser: &mut Parser) {
+    match parser.current_token.kind {
+        TokenType::True => parser.emit_bytecode(OpCode::True),
+        TokenType::False => parser.emit_bytecode(OpCode::False),
+        TokenType::Null => parser.emit_bytecode(OpCode::Null),
+        _ => return,
+    }
 }
 
 fn prefix_expression(parser: &mut Parser) {

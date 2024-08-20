@@ -1,6 +1,9 @@
 #[derive(Debug, PartialEq)]
 pub enum OpCode {
     Constant(usize),
+    Null,
+    True,
+    False,
     Negate,
     Add,
     Subtract,
@@ -13,6 +16,7 @@ pub enum OpCode {
 pub enum Value {
     Number(f64),
     Boolean(bool),
+    Null,
 }
 
 impl Value {

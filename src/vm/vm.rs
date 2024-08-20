@@ -49,6 +49,9 @@ impl<'a> VirtualMachine<'a> {
                             return InterpretResult::RuntimeError;
                         }
                     }
+                    OpCode::True => self.stack.push(Value::Boolean(true)),
+                    OpCode::False => self.stack.push(Value::Boolean(false)),
+                    OpCode::Null => self.stack.push(Value::Null),
                     OpCode::Negate => {
                         if let Some(value) = self.stack.last_mut() {
                             match value {
