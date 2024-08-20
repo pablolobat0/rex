@@ -1,21 +1,14 @@
-use std::{collections::HashMap, fmt::format};
+use std::collections::HashMap;
 
-use crate::common::lexer::{lexer::Lexer, token::Token, token::TokenType};
+use crate::common::{
+    lexer::{
+        lexer::Lexer,
+        token::{Token, TokenType},
+    },
+    precedences::{create_precedences, Precedence},
+};
 
 use super::chunk::{Chunk, OpCode, Value};
-
-// Precedence order in parsing
-#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
-enum Precedence {
-    Lowest,      // default value
-    Assigment,   // =
-    Equals,      // ==, !=
-    LessGreater, // >, <, >=, <=
-    Sum,         // +, -
-    Product,     // *, /
-    Prefix,      // -X, !X
-    Call,        // myFunction(X)
-}
 
 // Function types for prefix and infix parsing
 type PrefixParseFn = fn(&mut Parser);
@@ -99,6 +92,7 @@ impl<'a> Parser<'a> {
 
     pub fn compile(&mut self) -> bool {
         self.expression(Precedence::Lowest);
+        // Check compilation errors
         self.errors.len() == 0
     }
 
@@ -146,23 +140,7 @@ impl<'a> Parser<'a> {
     }
 }
 
-fn create_precedences() -> HashMap<TokenType, Precedence> {
-    let mut precedences = HashMap::new();
-    precedences.insert(TokenType::EqualEqual, Precedence::Equals);
-    precedences.insert(TokenType::BangEqual, Precedence::Equals);
-    precedences.insert(TokenType::Greater, Precedence::LessGreater);
-    precedences.insert(TokenType::GreaterEqual, Precedence::LessGreater);
-    precedences.insert(TokenType::Less, Precedence::LessGreater);
-    precedences.insert(TokenType::LessEqual, Precedence::LessGreater);
-    precedences.insert(TokenType::Plus, Precedence::Sum);
-    precedences.insert(TokenType::Minus, Precedence::Sum);
-    precedences.insert(TokenType::Star, Precedence::Product);
-    precedences.insert(TokenType::Slash, Precedence::Product);
-    precedences.insert(TokenType::LeftParen, Precedence::Call);
-    precedences.insert(TokenType::Equal, Precedence::Assigment);
-
-    precedences
-}
+// Prefix parsing functions
 
 fn number(parser: &mut Parser) {
     let value = Value::Number(
@@ -190,6 +168,8 @@ fn prefix_expression(parser: &mut Parser) {
         ),
     }
 }
+
+// Infix parsing functions
 
 fn infix_expression(parser: &mut Parser) {
     let operator = parser.current_token.kind;

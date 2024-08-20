@@ -1,6 +1,9 @@
-use crate::common::lexer::{
-    lexer::Lexer,
-    token::{Token, TokenType},
+use crate::common::{
+    lexer::{
+        lexer::Lexer,
+        token::{Token, TokenType},
+    },
+    precedences::{create_precedences, Precedence},
 };
 
 use crate::interpreter::parser::ast::Identifier;
@@ -11,19 +14,6 @@ use super::ast::{
     Program, ReturnStatement, Statement, StringLiteral, WhileStatement,
 };
 use std::collections::HashMap;
-
-// Precedence order in parsing
-#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
-enum Precedence {
-    Lowest,      // default value
-    Assigment,   // =
-    Equals,      // ==, !=
-    LessGreater, // >, <, >=, <=
-    Sum,         // +, -
-    Product,     // *, /
-    Prefix,      // -X, !X
-    Call,        // myFunction(X)
-}
 
 // Function types for prefix and infix parsing
 type PrefixParseFn = fn(&mut Parser<'_>) -> Option<Expression>;
@@ -329,23 +319,6 @@ impl<'a> Parser<'a> {
     }
 }
 
-fn create_precedences() -> HashMap<TokenType, Precedence> {
-    let mut precedences = HashMap::new();
-    precedences.insert(TokenType::EqualEqual, Precedence::Equals);
-    precedences.insert(TokenType::BangEqual, Precedence::Equals);
-    precedences.insert(TokenType::Greater, Precedence::LessGreater);
-    precedences.insert(TokenType::GreaterEqual, Precedence::LessGreater);
-    precedences.insert(TokenType::Less, Precedence::LessGreater);
-    precedences.insert(TokenType::LessEqual, Precedence::LessGreater);
-    precedences.insert(TokenType::Plus, Precedence::Sum);
-    precedences.insert(TokenType::Minus, Precedence::Sum);
-    precedences.insert(TokenType::Star, Precedence::Product);
-    precedences.insert(TokenType::Slash, Precedence::Product);
-    precedences.insert(TokenType::LeftParen, Precedence::Call);
-    precedences.insert(TokenType::Equal, Precedence::Assigment);
-
-    precedences
-}
 // Prefix functions
 fn parse_identifier(parser: &mut Parser<'_>) -> Option<Expression> {
     Some(Expression::Identifier(Identifier::new(
