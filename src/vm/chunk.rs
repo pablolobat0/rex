@@ -9,7 +9,27 @@ pub enum OpCode {
     Return,
 }
 
-pub type Value = f64;
+#[derive(Debug, Clone, PartialEq)]
+pub enum Value {
+    Number(f64),
+    Boolean(bool),
+}
+
+impl Value {
+    pub fn is_number(&self) -> bool {
+        match self {
+            Value::Number(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_boolean(&self) -> bool {
+        match self {
+            Value::Boolean(_) => true,
+            _ => false,
+        }
+    }
+}
 
 #[derive(Debug)]
 pub struct Chunk {

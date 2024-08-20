@@ -165,11 +165,13 @@ fn create_precedences() -> HashMap<TokenType, Precedence> {
 }
 
 fn number(parser: &mut Parser) {
-    let value: Value = parser
-        .current_token
-        .lexeme
-        .parse()
-        .expect("Not a valid number");
+    let value = Value::Number(
+        parser
+            .current_token
+            .lexeme
+            .parse()
+            .expect("Not a valid number"),
+    );
     let index = parser.current_chunk.add_constant(value);
     parser.emit_bytecode(OpCode::Constant(index));
 }

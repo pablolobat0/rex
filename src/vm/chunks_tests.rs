@@ -5,7 +5,7 @@ mod test {
     use crate::{
         common::lexer::lexer::Lexer,
         vm::{
-            chunk::{Chunk, OpCode},
+            chunk::{Chunk, OpCode, Value},
             compiler::Parser,
             vm::{InterpretResult, VirtualMachine},
         },
@@ -13,14 +13,19 @@ mod test {
 
     #[test]
     fn test_constant() {
-        let mut chunk = Chunk::new();
-        let constant = chunk.add_constant(1.2);
-        chunk.write(OpCode::Constant(constant), 1);
+        let mut lexer = Lexer::new("1");
+        let mut parser = Parser::new(&mut lexer);
 
-        let code = vec![OpCode::Constant(constant)];
+        assert!(parser.compile(), "Parser should compile without errors");
 
-        assert_eq!(chunk.get(constant), code.get(constant));
-        assert_eq!(chunk.get_line(constant), Option::Some(1));
+        let mut vm = VirtualMachine::new(&mut parser);
+
+        assert_eq!(
+            vm.interpret(),
+            InterpretResult::Ok,
+            "VM should run without errors"
+        );
+        assert_eq!(vm.stack.get(0), Some(&Value::Number(1.0)));
     }
 
     #[test]
@@ -37,7 +42,7 @@ mod test {
             InterpretResult::Ok,
             "VM should run without errors"
         );
-        assert_eq!(vm.stack.get(0), Some(-1.2).as_ref());
+        assert_eq!(vm.stack.get(0), Some(&Value::Number(-1.2)));
     }
 
     #[test]
@@ -54,7 +59,7 @@ mod test {
             InterpretResult::Ok,
             "VM should run without errors"
         );
-        assert_eq!(vm.stack.get(0), Some(15.0).as_ref());
+        assert_eq!(vm.stack.get(0), Some(&Value::Number(15.0)));
     }
     #[test]
     fn test_subtract() {
@@ -70,7 +75,7 @@ mod test {
             InterpretResult::Ok,
             "VM should run without errors"
         );
-        assert_eq!(vm.stack.get(0), Some(5.0).as_ref());
+        assert_eq!(vm.stack.get(0), Some(&Value::Number(5.0)));
     }
     #[test]
     fn test_multiply() {
@@ -86,7 +91,7 @@ mod test {
             InterpretResult::Ok,
             "VM should run without errors"
         );
-        assert_eq!(vm.stack.get(0), Some(50.0).as_ref());
+        assert_eq!(vm.stack.get(0), Some(&Value::Number(50.0)));
     }
     #[test]
     fn test_divide() {
@@ -103,7 +108,7 @@ mod test {
             InterpretResult::Ok,
             "VM should run without errors"
         );
-        assert_eq!(vm.stack.get(0), Some(2.0).as_ref());
+        assert_eq!(vm.stack.get(0), Some(&Value::Number(2.0)));
     }
     #[test]
     fn test_division_by_zero() {

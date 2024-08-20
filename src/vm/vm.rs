@@ -51,35 +51,38 @@ impl<'a> VirtualMachine<'a> {
                     }
                     OpCode::Negate => {
                         if let Some(value) = self.stack.last_mut() {
-                            *value = -*value;
+                            match value {
+                                Value::Number(n) => *value = Value::Number(-*n),
+                                _ => return InterpretResult::RuntimeError,
+                            }
                         } else {
                             return InterpretResult::RuntimeError;
                         }
                     }
                     OpCode::Add => match (self.stack.pop(), self.stack.pop()) {
-                        (Some(first_value), Some(second_value)) => {
-                            self.stack.push(first_value + second_value);
+                        (Some(Value::Number(first_value)), Some(Value::Number(second_value))) => {
+                            self.stack.push(Value::Number(first_value + second_value));
                         }
                         _ => return InterpretResult::RuntimeError,
                     },
                     OpCode::Subtract => match (self.stack.pop(), self.stack.pop()) {
-                        (Some(first_value), Some(second_value)) => {
-                            self.stack.push(second_value - first_value);
+                        (Some(Value::Number(first_value)), Some(Value::Number(second_value))) => {
+                            self.stack.push(Value::Number(second_value - first_value));
                         }
                         _ => return InterpretResult::RuntimeError,
                     },
                     OpCode::Multiply => match (self.stack.pop(), self.stack.pop()) {
-                        (Some(first_value), Some(second_value)) => {
-                            self.stack.push(first_value * second_value);
+                        (Some(Value::Number(first_value)), Some(Value::Number(second_value))) => {
+                            self.stack.push(Value::Number(first_value * second_value));
                         }
                         _ => return InterpretResult::RuntimeError,
                     },
                     OpCode::Divide => match (self.stack.pop(), self.stack.pop()) {
-                        (Some(first_value), Some(second_value)) => {
+                        (Some(Value::Number(first_value)), Some(Value::Number(second_value))) => {
                             if first_value == 0.0 {
                                 return InterpretResult::RuntimeError;
                             }
-                            self.stack.push(second_value / first_value);
+                            self.stack.push(Value::Number(second_value / first_value));
                         }
                         _ => return InterpretResult::RuntimeError,
                     },
