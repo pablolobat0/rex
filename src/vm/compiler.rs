@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt::format};
 
 use crate::common::lexer::{lexer::Lexer, token::Token, token::TokenType};
 
@@ -17,6 +17,10 @@ enum Precedence {
     Call,        // myFunction(X)
 }
 
+// Function types for prefix and infix parsing
+type PrefixParseFn = fn(&mut Parser);
+type InfixParseFn = fn(&mut Parser);
+
 #[derive(Debug)]
 pub struct Parser<'a> {
     lexer: &'a mut Lexer<'a>,
@@ -24,6 +28,8 @@ pub struct Parser<'a> {
     peek_token: Token,
     pub errors: Vec<String>,
     pub current_chunk: Chunk,
+    prefix_parse_fns: HashMap<TokenType, PrefixParseFn>,
+    infix_parse_fns: HashMap<TokenType, InfixParseFn>,
     precedences: HashMap<TokenType, Precedence>,
 }
 
@@ -32,14 +38,36 @@ impl<'a> Parser<'a> {
         let current_token = lexer.next_token();
         let peek_token = lexer.next_token();
 
-        Parser {
+        let mut parser = Parser {
             lexer,
             current_token,
             peek_token,
             errors: vec![],
             current_chunk: Chunk::new(),
+            prefix_parse_fns: HashMap::new(),
+            infix_parse_fns: HashMap::new(),
             precedences: create_precedences(),
-        }
+        };
+
+        // Prefix functions
+        parser.register_prefix(TokenType::Integer, number);
+        parser.register_prefix(TokenType::Float, number);
+        parser.register_prefix(TokenType::Minus, prefix_expression);
+        // Infix functions
+        parser.register_infix(TokenType::Plus, infix_expression);
+        parser.register_infix(TokenType::Minus, infix_expression);
+        parser.register_infix(TokenType::Star, infix_expression);
+        parser.register_infix(TokenType::Slash, infix_expression);
+
+        parser
+    }
+
+    fn register_prefix(&mut self, token_type: TokenType, func: PrefixParseFn) {
+        self.prefix_parse_fns.insert(token_type, func);
+    }
+
+    fn register_infix(&mut self, token_type: TokenType, func: InfixParseFn) {
+        self.infix_parse_fns.insert(token_type, func);
     }
 
     // Consumes a token, updating current and peek token
@@ -70,6 +98,7 @@ impl<'a> Parser<'a> {
     }
 
     pub fn compile(&mut self) -> bool {
+        self.expression(Precedence::Lowest);
         self.errors.len() == 0
     }
 
@@ -78,43 +107,43 @@ impl<'a> Parser<'a> {
             .write(byte, self.current_token.line as usize);
     }
 
-    fn number(&mut self) {
-        let value: Value = self
-            .current_token
-            .lexeme
-            .parse()
-            .expect("Not a valid number");
-        let index = self.current_chunk.add_constant(value);
-        self.emit_bytecode(OpCode::Constant(index));
-    }
+    fn expression(&mut self, precedence: Precedence) {
+        let prefix_fn = self.prefix_parse_fns.get(&self.current_token.kind);
 
-    fn prefix_expression(&mut self) {
-        let operator = self.current_token.kind;
-        self.expression();
-
-        match operator {
-            TokenType::Minus => self.emit_bytecode(OpCode::Negate),
-            _ => self.add_error(
+        match prefix_fn {
+            Some(function) => function(self),
+            None => self.add_error(
                 "Unknow prefix operator".to_string(),
                 self.current_token.line,
             ),
         }
-    }
 
-    fn infix_expression(&mut self) {
-        let operator = self.current_token.kind;
-        self.expression();
-
-        match operator {
-            TokenType::Plus => self.emit_bytecode(OpCode::Add),
-            TokenType::Minus => self.emit_bytecode(OpCode::Subtract),
-            TokenType::Star => self.emit_bytecode(OpCode::Multiply),
-            TokenType::Slash => self.emit_bytecode(OpCode::Divide),
-            _ => self.add_error("Unknow infix operator".to_string(), self.current_token.line),
+        while precedence < self.peek_precedence() {
+            // Consume token
+            self.next_token();
+            let infix_fn = self.infix_parse_fns.get(&self.current_token.kind);
+            match infix_fn {
+                Some(function) => function(self),
+                None => {
+                    self.add_error("Unknow infix operator".to_string(), self.current_token.line)
+                }
+            }
         }
     }
 
-    fn expression(&mut self) {}
+    fn current_precedence(&self) -> Precedence {
+        *self
+            .precedences
+            .get(&self.current_token.kind)
+            .unwrap_or(&Precedence::Lowest)
+    }
+
+    fn peek_precedence(&self) -> Precedence {
+        *self
+            .precedences
+            .get(&self.peek_token.kind)
+            .unwrap_or(&Precedence::Lowest)
+    }
 }
 
 fn create_precedences() -> HashMap<TokenType, Precedence> {
@@ -133,4 +162,49 @@ fn create_precedences() -> HashMap<TokenType, Precedence> {
     precedences.insert(TokenType::Equal, Precedence::Assigment);
 
     precedences
+}
+
+fn number(parser: &mut Parser) {
+    let value: Value = parser
+        .current_token
+        .lexeme
+        .parse()
+        .expect("Not a valid number");
+    let index = parser.current_chunk.add_constant(value);
+    parser.emit_bytecode(OpCode::Constant(index));
+}
+
+fn prefix_expression(parser: &mut Parser) {
+    let operator = parser.current_token.kind;
+    // Consume current token
+    parser.next_token();
+    parser.expression(Precedence::Prefix);
+
+    match operator {
+        TokenType::Minus => parser.emit_bytecode(OpCode::Negate),
+        _ => parser.add_error(
+            "Unknow prefix operator".to_string(),
+            parser.current_token.line,
+        ),
+    }
+}
+
+fn infix_expression(parser: &mut Parser) {
+    let operator = parser.current_token.kind;
+    let precedence = parser.current_precedence();
+    // Consume current token
+    parser.next_token();
+
+    parser.expression(precedence);
+
+    match operator {
+        TokenType::Plus => parser.emit_bytecode(OpCode::Add),
+        TokenType::Minus => parser.emit_bytecode(OpCode::Subtract),
+        TokenType::Star => parser.emit_bytecode(OpCode::Multiply),
+        TokenType::Slash => parser.emit_bytecode(OpCode::Divide),
+        _ => parser.add_error(
+            "Unknow infix operator".to_string(),
+            parser.current_token.line,
+        ),
+    }
 }

@@ -1,9 +1,5 @@
-use std::{borrow::BorrowMut, cell::RefCell, rc::Rc};
-
-use crate::common::lexer::lexer::Lexer;
-
 use super::{
-    chunk::{Chunk, OpCode, Value},
+    chunk::{OpCode, Value},
     compiler::Parser,
 };
 
@@ -33,7 +29,7 @@ impl<'a> VirtualMachine<'a> {
         if !self.parser.compile() {
             return InterpretResult::CompileError;
         }
-        // Luego, creamos una VirtualMachine y ejecutamos el Chunk
+
         self.interpret()
     }
 
@@ -48,10 +44,8 @@ impl<'a> VirtualMachine<'a> {
                         if let Some(constant) =
                             self.parser.current_chunk.get_constant(*index).cloned()
                         {
-                            println!("Executing Constant with value: {}", constant);
                             self.stack.push(constant);
                         } else {
-                            println!("Error: Constant not found.");
                             return InterpretResult::RuntimeError;
                         }
                     }
@@ -70,7 +64,7 @@ impl<'a> VirtualMachine<'a> {
                     },
                     OpCode::Subtract => match (self.stack.pop(), self.stack.pop()) {
                         (Some(first_value), Some(second_value)) => {
-                            self.stack.push(first_value - second_value);
+                            self.stack.push(second_value - first_value);
                         }
                         _ => return InterpretResult::RuntimeError,
                     },
@@ -82,10 +76,10 @@ impl<'a> VirtualMachine<'a> {
                     },
                     OpCode::Divide => match (self.stack.pop(), self.stack.pop()) {
                         (Some(first_value), Some(second_value)) => {
-                            if second_value == 0.0 {
+                            if first_value == 0.0 {
                                 return InterpretResult::RuntimeError;
                             }
-                            self.stack.push(first_value / second_value);
+                            self.stack.push(second_value / first_value);
                         }
                         _ => return InterpretResult::RuntimeError,
                     },

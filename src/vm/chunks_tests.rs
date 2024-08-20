@@ -25,90 +25,99 @@ mod test {
 
     #[test]
     fn test_negate() {
-        let mut chunk = Chunk::new();
-        let constant = chunk.add_constant(1.2);
-        chunk.write(OpCode::Constant(constant), 1);
-        chunk.write(OpCode::Negate, 1);
-        let mut lexer = Lexer::new("");
+        let mut lexer = Lexer::new("-1.2");
         let mut parser = Parser::new(&mut lexer);
+
+        assert!(parser.compile(), "Parser should compile without errors");
+
         let mut vm = VirtualMachine::new(&mut parser);
 
-        assert_eq!(vm.interpret(), InterpretResult::Ok);
+        assert_eq!(
+            vm.interpret(),
+            InterpretResult::Ok,
+            "VM should run without errors"
+        );
         assert_eq!(vm.stack.get(0), Some(-1.2).as_ref());
     }
 
     #[test]
     fn test_add() {
-        let mut chunk = Chunk::new();
-        let constant = chunk.add_constant(5.0);
-        chunk.write(OpCode::Constant(constant), 1);
-        let constant = chunk.add_constant(10.0);
-        chunk.write(OpCode::Constant(constant), 1);
-        chunk.write(OpCode::Add, 1);
-        let mut lexer = Lexer::new("");
+        let mut lexer = Lexer::new("10+5");
         let mut parser = Parser::new(&mut lexer);
+
+        assert!(parser.compile(), "Parser should compile without errors");
+
         let mut vm = VirtualMachine::new(&mut parser);
 
-        assert_eq!(vm.interpret(), InterpretResult::Ok);
+        assert_eq!(
+            vm.interpret(),
+            InterpretResult::Ok,
+            "VM should run without errors"
+        );
         assert_eq!(vm.stack.get(0), Some(15.0).as_ref());
     }
     #[test]
     fn test_subtract() {
-        let mut chunk = Chunk::new();
-        let constant = chunk.add_constant(5.0);
-        chunk.write(OpCode::Constant(constant), 1);
-        let constant = chunk.add_constant(10.0);
-        chunk.write(OpCode::Constant(constant), 1);
-        chunk.write(OpCode::Subtract, 1);
-        let mut lexer = Lexer::new("");
+        let mut lexer = Lexer::new("10-5");
         let mut parser = Parser::new(&mut lexer);
+
+        assert!(parser.compile(), "Parser should compile without errors");
+
         let mut vm = VirtualMachine::new(&mut parser);
 
-        assert_eq!(vm.interpret(), InterpretResult::Ok);
+        assert_eq!(
+            vm.interpret(),
+            InterpretResult::Ok,
+            "VM should run without errors"
+        );
         assert_eq!(vm.stack.get(0), Some(5.0).as_ref());
     }
     #[test]
     fn test_multiply() {
-        let mut chunk = Chunk::new();
-        let constant = chunk.add_constant(5.0);
-        chunk.write(OpCode::Constant(constant), 1);
-        let constant = chunk.add_constant(10.0);
-        chunk.write(OpCode::Constant(constant), 1);
-        chunk.write(OpCode::Multiply, 1);
-        let mut lexer = Lexer::new("");
+        let mut lexer = Lexer::new("10*5");
         let mut parser = Parser::new(&mut lexer);
+
+        assert!(parser.compile(), "Parser should compile without errors");
+
         let mut vm = VirtualMachine::new(&mut parser);
 
-        assert_eq!(vm.interpret(), InterpretResult::Ok);
+        assert_eq!(
+            vm.interpret(),
+            InterpretResult::Ok,
+            "VM should run without errors"
+        );
         assert_eq!(vm.stack.get(0), Some(50.0).as_ref());
     }
     #[test]
     fn test_divide() {
-        let mut chunk = Chunk::new();
-        let constant = chunk.add_constant(5.0);
-        chunk.write(OpCode::Constant(constant), 1);
-        let constant = chunk.add_constant(10.0);
-        chunk.write(OpCode::Constant(constant), 1);
-        chunk.write(OpCode::Divide, 1);
-        let mut lexer = Lexer::new("");
+        let input = "10 / 5";
+        let mut lexer = Lexer::new(input);
         let mut parser = Parser::new(&mut lexer);
+
+        assert!(parser.compile(), "Parser should compile without errors");
+
         let mut vm = VirtualMachine::new(&mut parser);
 
-        assert_eq!(vm.interpret(), InterpretResult::Ok);
+        assert_eq!(
+            vm.interpret(),
+            InterpretResult::Ok,
+            "VM should run without errors"
+        );
         assert_eq!(vm.stack.get(0), Some(2.0).as_ref());
     }
     #[test]
-    fn test_divide_by_0() {
-        let mut chunk = Chunk::new();
-        let constant = chunk.add_constant(0.0);
-        chunk.write(OpCode::Constant(constant), 1);
-        let constant = chunk.add_constant(10.0);
-        chunk.write(OpCode::Constant(constant), 1);
-        chunk.write(OpCode::Divide, 1);
-        let mut lexer = Lexer::new("");
+    fn test_division_by_zero() {
+        let input = "10 / 0";
+        let mut lexer = Lexer::new(input);
         let mut parser = Parser::new(&mut lexer);
-        let mut vm = VirtualMachine::new(&mut parser);
 
-        assert_eq!(vm.interpret(), InterpretResult::RuntimeError);
+        assert!(parser.compile(), "Parser should compile without errors");
+
+        let mut vm = VirtualMachine::new(&mut parser);
+        assert_eq!(
+            vm.interpret(),
+            InterpretResult::RuntimeError,
+            "VM should return a runtime error for division by zero"
+        );
     }
 }
