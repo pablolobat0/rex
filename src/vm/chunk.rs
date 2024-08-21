@@ -4,6 +4,13 @@ pub enum OpCode {
     Null,
     True,
     False,
+    Not,
+    Equal,
+    Greater,
+    Less,
+    LessEqual,
+    GreaterEqual,
+    NotEqual,
     Negate,
     Add,
     Subtract,
@@ -88,5 +95,14 @@ impl Chunk {
     }
     pub fn get_constant(&mut self, index: usize) -> Option<&Value> {
         self.constants.get(index)
+    }
+}
+
+pub fn value_equal(a: Value, b: Value) -> bool {
+    match (a, b) {
+        (Value::Boolean(a_bool), Value::Boolean(b_bool)) => a_bool == b_bool,
+        (Value::Number(a_number), Value::Number(b_number)) => a_number == b_number,
+        (Value::Null, Value::Null) => true,
+        (_, _) => false,
     }
 }

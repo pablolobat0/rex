@@ -10,11 +10,25 @@ mod test {
         },
     };
 
+    fn check_parser_errors(parser: &Parser) {
+        let errors = &parser.errors;
+        if errors.is_empty() {
+            return;
+        }
+
+        println!("parser has {} errors", errors.len());
+        for error in errors {
+            println!("parser error: {}", error);
+        }
+        panic!("parser errors encountered");
+    }
+
     fn test_number(input: &str, result: f64) {
         let mut lexer = Lexer::new(input);
         let mut parser = Parser::new(&mut lexer);
+        parser.compile();
 
-        assert!(parser.compile(), "Parser should compile without errors");
+        check_parser_errors(&parser);
 
         let mut vm = VirtualMachine::new(&mut parser);
 
@@ -31,7 +45,9 @@ mod test {
         let mut lexer = Lexer::new(input);
         let mut parser = Parser::new(&mut lexer);
 
-        assert!(parser.compile(), "Parser should compile without errors");
+        parser.compile();
+
+        check_parser_errors(&parser);
 
         let mut vm = VirtualMachine::new(&mut parser);
 
@@ -40,6 +56,7 @@ mod test {
             InterpretResult::Ok,
             "VM should run without errors"
         );
+        println!("{}", input);
 
         assert_eq!(vm.stack.get(0), Some(&Value::Boolean(result)));
     }
@@ -115,5 +132,45 @@ mod test {
             InterpretResult::RuntimeError,
             "VM should return a runtime error for division by zero"
         );
+    }
+
+    #[test]
+    fn test_not() {
+        let tests = [
+            ("!true", false),
+            ("!false", true),
+            ("!null", true),
+            ("!1", false),
+        ];
+
+        for (input, result) in tests {
+            test_bool(input, result);
+        }
+    }
+
+    #[test]
+    fn test_boolean_infix() {
+        let tests = [
+            ("true == true", true),
+            ("false == true", false),
+            ("1 == 1", true),
+            ("1 == 2", false),
+            ("1 != 1", false),
+            ("1 != 2", true),
+            ("true != true", false),
+            ("true != false", true),
+            ("1 > 0", true),
+            ("1 > 1", false),
+            ("1 >= 1", true),
+            ("1 >= 2", false),
+            ("1 < 1", false),
+            ("1 < 2", true),
+            ("1 <= 1", true),
+            ("1 <= 0", false),
+        ];
+
+        for (input, result) in tests {
+            test_bool(input, result);
+        }
     }
 }

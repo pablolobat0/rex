@@ -49,11 +49,18 @@ impl<'a> Parser<'a> {
         parser.register_prefix(TokenType::False, literal);
         parser.register_prefix(TokenType::Null, literal);
         parser.register_prefix(TokenType::Minus, prefix_expression);
+        parser.register_prefix(TokenType::Bang, prefix_expression);
         // Infix functions
         parser.register_infix(TokenType::Plus, infix_expression);
         parser.register_infix(TokenType::Minus, infix_expression);
         parser.register_infix(TokenType::Star, infix_expression);
         parser.register_infix(TokenType::Slash, infix_expression);
+        parser.register_infix(TokenType::EqualEqual, infix_expression);
+        parser.register_infix(TokenType::BangEqual, infix_expression);
+        parser.register_infix(TokenType::Greater, infix_expression);
+        parser.register_infix(TokenType::GreaterEqual, infix_expression);
+        parser.register_infix(TokenType::Less, infix_expression);
+        parser.register_infix(TokenType::LessEqual, infix_expression);
 
         parser
     }
@@ -174,6 +181,7 @@ fn prefix_expression(parser: &mut Parser) {
 
     match operator {
         TokenType::Minus => parser.emit_bytecode(OpCode::Negate),
+        TokenType::Bang => parser.emit_bytecode(OpCode::Not),
         _ => parser.add_error(
             "Unknow prefix operator".to_string(),
             parser.current_token.line,
@@ -196,6 +204,12 @@ fn infix_expression(parser: &mut Parser) {
         TokenType::Minus => parser.emit_bytecode(OpCode::Subtract),
         TokenType::Star => parser.emit_bytecode(OpCode::Multiply),
         TokenType::Slash => parser.emit_bytecode(OpCode::Divide),
+        TokenType::EqualEqual => parser.emit_bytecode(OpCode::Equal),
+        TokenType::BangEqual => parser.emit_bytecode(OpCode::NotEqual),
+        TokenType::Less => parser.emit_bytecode(OpCode::Less),
+        TokenType::LessEqual => parser.emit_bytecode(OpCode::LessEqual),
+        TokenType::Greater => parser.emit_bytecode(OpCode::Greater),
+        TokenType::GreaterEqual => parser.emit_bytecode(OpCode::GreaterEqual),
         _ => parser.add_error(
             "Unknow infix operator".to_string(),
             parser.current_token.line,

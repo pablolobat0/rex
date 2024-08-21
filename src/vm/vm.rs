@@ -1,5 +1,5 @@
 use super::{
-    chunk::{OpCode, Value},
+    chunk::{value_equal, OpCode, Value},
     compiler::Parser,
 };
 
@@ -52,6 +52,45 @@ impl<'a> VirtualMachine<'a> {
                     OpCode::True => self.stack.push(Value::Boolean(true)),
                     OpCode::False => self.stack.push(Value::Boolean(false)),
                     OpCode::Null => self.stack.push(Value::Null),
+                    OpCode::Not => {
+                        if let Some(value) = self.stack.last_mut() {
+                            *value = Value::Boolean(is_falsey(value.clone()));
+                        } else {
+                            return InterpretResult::RuntimeError;
+                        }
+                    }
+                    OpCode::Equal => match (self.stack.pop(), self.stack.pop()) {
+                        (Some(a), Some(b)) => self.stack.push(Value::Boolean(value_equal(a, b))),
+                        (_, _) => return InterpretResult::RuntimeError,
+                    },
+                    OpCode::NotEqual => match (self.stack.pop(), self.stack.pop()) {
+                        (Some(a), Some(b)) => self.stack.push(Value::Boolean(!value_equal(a, b))),
+                        (_, _) => return InterpretResult::RuntimeError,
+                    },
+                    OpCode::Greater => match (self.stack.pop(), self.stack.pop()) {
+                        (Some(Value::Number(first_value)), Some(Value::Number(second_value))) => {
+                            self.stack.push(Value::Boolean(second_value > first_value));
+                        }
+                        _ => return InterpretResult::RuntimeError,
+                    },
+                    OpCode::GreaterEqual => match (self.stack.pop(), self.stack.pop()) {
+                        (Some(Value::Number(first_value)), Some(Value::Number(second_value))) => {
+                            self.stack.push(Value::Boolean(second_value >= first_value));
+                        }
+                        _ => return InterpretResult::RuntimeError,
+                    },
+                    OpCode::Less => match (self.stack.pop(), self.stack.pop()) {
+                        (Some(Value::Number(first_value)), Some(Value::Number(second_value))) => {
+                            self.stack.push(Value::Boolean(second_value < first_value));
+                        }
+                        _ => return InterpretResult::RuntimeError,
+                    },
+                    OpCode::LessEqual => match (self.stack.pop(), self.stack.pop()) {
+                        (Some(Value::Number(first_value)), Some(Value::Number(second_value))) => {
+                            self.stack.push(Value::Boolean(second_value <= first_value));
+                        }
+                        _ => return InterpretResult::RuntimeError,
+                    },
                     OpCode::Negate => {
                         if let Some(value) = self.stack.last_mut() {
                             match value {
@@ -96,5 +135,13 @@ impl<'a> VirtualMachine<'a> {
         }
 
         InterpretResult::Ok
+    }
+}
+
+fn is_falsey(value: Value) -> bool {
+    match value {
+        Value::Boolean(bool) => !bool,
+        Value::Null => true,
+        _ => false,
     }
 }
