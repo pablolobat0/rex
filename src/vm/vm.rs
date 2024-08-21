@@ -105,6 +105,10 @@ impl<'a> VirtualMachine<'a> {
                         (Some(Value::Number(first_value)), Some(Value::Number(second_value))) => {
                             self.stack.push(Value::Number(first_value + second_value));
                         }
+                        (Some(Value::String(first_value)), Some(Value::String(second_value))) => {
+                            self.stack
+                                .push(Value::String(format!("{}{}", second_value, first_value)));
+                        }
                         _ => return InterpretResult::RuntimeError,
                     },
                     OpCode::Subtract => match (self.stack.pop(), self.stack.pop()) {

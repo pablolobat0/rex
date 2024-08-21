@@ -45,6 +45,7 @@ impl<'a> Parser<'a> {
         // Prefix functions
         parser.register_prefix(TokenType::Integer, number);
         parser.register_prefix(TokenType::Float, number);
+        parser.register_prefix(TokenType::String, literal);
         parser.register_prefix(TokenType::True, literal);
         parser.register_prefix(TokenType::False, literal);
         parser.register_prefix(TokenType::Null, literal);
@@ -166,6 +167,12 @@ fn number(parser: &mut Parser) {
 
 fn literal(parser: &mut Parser) {
     match parser.current_token.kind {
+        TokenType::String => {
+            let index = parser
+                .current_chunk
+                .add_constant(Value::String(parser.current_token.lexeme.clone()));
+            parser.emit_bytecode(OpCode::Constant(index));
+        }
         TokenType::True => parser.emit_bytecode(OpCode::True),
         TokenType::False => parser.emit_bytecode(OpCode::False),
         TokenType::Null => parser.emit_bytecode(OpCode::Null),

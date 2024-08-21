@@ -61,6 +61,26 @@ mod test {
         assert_eq!(vm.stack.get(0), Some(&Value::Boolean(result)));
     }
 
+    fn test_string(input: &str, result: String) {
+        let mut lexer = Lexer::new(input);
+        let mut parser = Parser::new(&mut lexer);
+
+        parser.compile();
+
+        check_parser_errors(&parser);
+
+        let mut vm = VirtualMachine::new(&mut parser);
+
+        assert_eq!(
+            vm.interpret(),
+            InterpretResult::Ok,
+            "VM should run without errors"
+        );
+        println!("{}", input);
+
+        assert_eq!(vm.stack.get(0), Some(&Value::String(result)));
+    }
+
     #[test]
     fn test_constant() {
         test_number("1", 1.0);
@@ -153,10 +173,14 @@ mod test {
         let tests = [
             ("true == true", true),
             ("false == true", false),
+            ("\"hola\" == \"hola\"", true),
+            ("\"hola\" == \"mundo\"", false),
             ("1 == 1", true),
             ("1 == 2", false),
             ("1 != 1", false),
             ("1 != 2", true),
+            ("\"hola\" != \"hola\"", false),
+            ("\"hola\" != \"mundo\"", true),
             ("true != true", false),
             ("true != false", true),
             ("1 > 0", true),
@@ -172,5 +196,15 @@ mod test {
         for (input, result) in tests {
             test_bool(input, result);
         }
+    }
+
+    #[test]
+    fn test_string_literal() {
+        test_string("\"hola\"", "hola".to_string());
+    }
+
+    #[test]
+    fn test_string_concatenation() {
+        test_string("\"hola\" + \" mundo\"", "hola mundo".to_string());
     }
 }

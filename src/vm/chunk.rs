@@ -23,6 +23,7 @@ pub enum OpCode {
 pub enum Value {
     Number(f64),
     Boolean(bool),
+    String(String),
     Null,
 }
 
@@ -102,6 +103,7 @@ pub fn value_equal(a: Value, b: Value) -> bool {
     match (a, b) {
         (Value::Boolean(a_bool), Value::Boolean(b_bool)) => a_bool == b_bool,
         (Value::Number(a_number), Value::Number(b_number)) => a_number == b_number,
+        (Value::String(a_string), Value::String(b_string)) => a_string == b_string,
         (Value::Null, Value::Null) => true,
         (_, _) => false,
     }
