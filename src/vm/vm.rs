@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+use crate::common::lexer::lexer::Lexer;
+
 use super::{
     chunk::{value_equal, OpCode, Value},
     compiler::Compiler,
@@ -29,12 +31,17 @@ impl<'a> VirtualMachine<'a> {
             globals: HashMap::new(),
         }
     }
-    pub fn compile_and_run(&mut self) -> InterpretResult {
-        if !self.compiler.compile() {
-            return InterpretResult::CompileError;
-        }
 
-        self.interpret()
+    pub fn new_with_globals(
+        compiler: &'a mut Compiler<'a>,
+        globals: HashMap<String, Value>,
+    ) -> VirtualMachine {
+        VirtualMachine {
+            pc: 0,
+            stack: vec![],
+            compiler,
+            globals, // Existing globals
+        }
     }
 
     pub fn interpret(&mut self) -> InterpretResult {
@@ -176,4 +183,20 @@ fn is_falsey(value: Value) -> bool {
         Value::Null => true,
         _ => false,
     }
+}
+
+pub fn compile_and_run(input: String) {
+    let mut lexer = Lexer::new(&input);
+    let mut compiler = Compiler::new(&mut lexer);
+
+    if !compiler.compile() {
+        println!("compiler has {} errors", compiler.errors.len());
+        for error in compiler.errors {
+            println!("compiler error: {}", error);
+        }
+        return;
+    }
+
+    let mut vm = VirtualMachine::new(&mut compiler);
+    vm.interpret();
 }

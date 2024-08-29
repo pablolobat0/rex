@@ -110,14 +110,22 @@ impl<'a> Compiler<'a> {
         self.errors.push(format!("Line {}: {}", line, message));
     }
 
-    pub fn compile_one_expression(&mut self) -> bool {
-        self.expression(Precedence::Lowest);
+    pub fn compile_one_statement(&mut self) -> bool {
+        self.one_statement();
         self.errors.len() == 0
+    }
+
+    fn one_statement(&mut self) {
+        match self.current_token.kind {
+            TokenType::Let => self.let_statement(),
+            _ => self.expression(Precedence::Lowest),
+        }
     }
 
     pub fn compile(&mut self) -> bool {
         while self.current_token.kind != TokenType::EOF {
             self.statement();
+            self.parse_end_statement();
         }
         // Check compilation errors
         self.errors.len() == 0
@@ -150,8 +158,6 @@ impl<'a> Compiler<'a> {
             self.emit_bytecode(OpCode::Null);
         }
 
-        self.parse_end_statement();
-
         self.emit_bytecode(OpCode::DefineGlobal(index));
     }
 
@@ -174,7 +180,6 @@ impl<'a> Compiler<'a> {
     }
     fn expression_statement(&mut self) {
         self.expression(Precedence::Lowest);
-        self.parse_end_statement();
         self.emit_bytecode(OpCode::Pop);
     }
 

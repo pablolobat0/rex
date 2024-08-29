@@ -1,9 +1,11 @@
 use clap::{arg, command, ArgAction};
 use interpreter::interpreter::interpret_ast;
 use repl::start_ast;
+use repl::start_vm;
 use std::env;
 use std::fs;
 use std::path::PathBuf;
+use vm::vm::compile_and_run;
 
 mod common;
 mod interpreter;
@@ -39,12 +41,12 @@ fn main() {
         // Read the file content
         let code = fs::read_to_string(file).expect("Failed to read the file");
         match interpreter_type {
-            InterpreterType::VM => {}
+            InterpreterType::VM => compile_and_run(code),
             InterpreterType::AST => interpret_ast(code),
         }
     } else {
         match interpreter_type {
-            InterpreterType::VM => {}
+            InterpreterType::VM => start_vm(),
             InterpreterType::AST => start_ast(),
         }
     }

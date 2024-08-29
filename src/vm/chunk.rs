@@ -1,3 +1,5 @@
+use std::fmt;
+
 #[derive(Debug, PartialEq)]
 pub enum OpCode {
     Constant(usize),
@@ -28,6 +30,17 @@ pub enum Value {
     Boolean(bool),
     String(String),
     Null,
+}
+
+impl fmt::Display for Value {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Value::Number(n) => write!(f, "{}", n),
+            Value::Boolean(b) => write!(f, "{}", b),
+            Value::String(s) => write!(f, "{}", s),
+            Value::Null => write!(f, "null"),
+        }
+    }
 }
 
 impl Value {

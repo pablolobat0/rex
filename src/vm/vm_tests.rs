@@ -26,7 +26,7 @@ mod test {
     fn test_number(input: &str, result: f64) {
         let mut lexer = Lexer::new(input);
         let mut compiler = Compiler::new(&mut lexer);
-        compiler.compile_one_expression();
+        compiler.compile_one_statement();
 
         check_compiler_errors(&compiler);
 
@@ -45,7 +45,7 @@ mod test {
         let mut lexer = Lexer::new(input);
         let mut compiler = Compiler::new(&mut lexer);
 
-        compiler.compile_one_expression();
+        compiler.compile_one_statement();
 
         check_compiler_errors(&compiler);
 
@@ -64,7 +64,7 @@ mod test {
         let mut lexer = Lexer::new(input);
         let mut compiler = Compiler::new(&mut lexer);
 
-        compiler.compile_one_expression();
+        compiler.compile_one_statement();
 
         check_compiler_errors(&compiler);
 
@@ -100,7 +100,7 @@ mod test {
         let mut compiler = Compiler::new(&mut lexer);
 
         assert!(
-            compiler.compile_one_expression(),
+            compiler.compile_one_statement(),
             "Compiler should compile without errors"
         );
 
@@ -147,7 +147,7 @@ mod test {
         let mut compiler = Compiler::new(&mut lexer);
 
         assert!(
-            compiler.compile_one_expression(),
+            compiler.compile_one_statement(),
             "Compiler should compile without errors"
         );
 
