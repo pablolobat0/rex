@@ -1,13 +1,15 @@
+use std::collections::HashMap;
+
 use super::{
     chunk::{value_equal, OpCode, Value},
-    compiler::Parser,
+    compiler::Compiler,
 };
 
 #[derive(Debug)]
 pub struct VirtualMachine<'a> {
     pc: usize,
     pub stack: Vec<Value>,
-    parser: &'a mut Parser<'a>,
+    compiler: &'a mut Compiler<'a>,
 }
 
 #[derive(Debug, PartialEq)]
@@ -18,15 +20,15 @@ pub enum InterpretResult {
 }
 
 impl<'a> VirtualMachine<'a> {
-    pub fn new(parser: &'a mut Parser<'a>) -> VirtualMachine {
+    pub fn new(compiler: &'a mut Compiler<'a>) -> VirtualMachine {
         VirtualMachine {
             pc: 0,
             stack: vec![],
-            parser,
+            compiler,
         }
     }
     pub fn compile_and_run(&mut self) -> InterpretResult {
-        if !self.parser.compile() {
+        if !self.compiler.compile() {
             return InterpretResult::CompileError;
         }
 
@@ -36,13 +38,13 @@ impl<'a> VirtualMachine<'a> {
     pub fn interpret(&mut self) -> InterpretResult {
         loop {
             // Gets next OpCode using current PC
-            let instruction = self.parser.current_chunk.get(self.pc);
+            let instruction = self.compiler.current_chunk.get(self.pc);
             self.pc += 1; // Increases current PC for next instruction
             match instruction {
                 Some(instruction) => match instruction {
                     OpCode::Constant(index) => {
                         if let Some(constant) =
-                            self.parser.current_chunk.get_constant(*index).cloned()
+                            self.compiler.current_chunk.get_constant(*index).cloned()
                         {
                             self.stack.push(constant);
                         } else {

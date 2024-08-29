@@ -5,32 +5,32 @@ mod test {
         common::lexer::lexer::Lexer,
         vm::{
             chunk::{Chunk, OpCode, Value},
-            compiler::Parser,
+            compiler::Compiler,
             vm::{InterpretResult, VirtualMachine},
         },
     };
 
-    fn check_parser_errors(parser: &Parser) {
-        let errors = &parser.errors;
+    fn check_compiler_errors(compiler: &Compiler) {
+        let errors = &compiler.errors;
         if errors.is_empty() {
             return;
         }
 
-        println!("parser has {} errors", errors.len());
+        println!("compiler has {} errors", errors.len());
         for error in errors {
-            println!("parser error: {}", error);
+            println!("compiler error: {}", error);
         }
-        panic!("parser errors encountered");
+        panic!("compiler errors encountered");
     }
 
     fn test_number(input: &str, result: f64) {
         let mut lexer = Lexer::new(input);
-        let mut parser = Parser::new(&mut lexer);
-        parser.compile();
+        let mut compiler = Compiler::new(&mut lexer);
+        compiler.compile_one_expression();
 
-        check_parser_errors(&parser);
+        check_compiler_errors(&compiler);
 
-        let mut vm = VirtualMachine::new(&mut parser);
+        let mut vm = VirtualMachine::new(&mut compiler);
 
         assert_eq!(
             vm.interpret(),
@@ -43,33 +43,32 @@ mod test {
 
     fn test_bool(input: &str, result: bool) {
         let mut lexer = Lexer::new(input);
-        let mut parser = Parser::new(&mut lexer);
+        let mut compiler = Compiler::new(&mut lexer);
 
-        parser.compile();
+        compiler.compile_one_expression();
 
-        check_parser_errors(&parser);
+        check_compiler_errors(&compiler);
 
-        let mut vm = VirtualMachine::new(&mut parser);
+        let mut vm = VirtualMachine::new(&mut compiler);
 
         assert_eq!(
             vm.interpret(),
             InterpretResult::Ok,
             "VM should run without errors"
         );
-        println!("{}", input);
 
         assert_eq!(vm.stack.get(0), Some(&Value::Boolean(result)));
     }
 
     fn test_string(input: &str, result: String) {
         let mut lexer = Lexer::new(input);
-        let mut parser = Parser::new(&mut lexer);
+        let mut compiler = Compiler::new(&mut lexer);
 
-        parser.compile();
+        compiler.compile_one_expression();
 
-        check_parser_errors(&parser);
+        check_compiler_errors(&compiler);
 
-        let mut vm = VirtualMachine::new(&mut parser);
+        let mut vm = VirtualMachine::new(&mut compiler);
 
         assert_eq!(
             vm.interpret(),
@@ -98,11 +97,14 @@ mod test {
     #[test]
     fn test_null() {
         let mut lexer = Lexer::new("null");
-        let mut parser = Parser::new(&mut lexer);
+        let mut compiler = Compiler::new(&mut lexer);
 
-        assert!(parser.compile(), "Parser should compile without errors");
+        assert!(
+            compiler.compile_one_expression(),
+            "Compiler should compile without errors"
+        );
 
-        let mut vm = VirtualMachine::new(&mut parser);
+        let mut vm = VirtualMachine::new(&mut compiler);
 
         assert_eq!(
             vm.interpret(),
@@ -142,11 +144,14 @@ mod test {
     fn test_division_by_zero() {
         let input = "10 / 0";
         let mut lexer = Lexer::new(input);
-        let mut parser = Parser::new(&mut lexer);
+        let mut compiler = Compiler::new(&mut lexer);
 
-        assert!(parser.compile(), "Parser should compile without errors");
+        assert!(
+            compiler.compile_one_expression(),
+            "Compiler should compile without errors"
+        );
 
-        let mut vm = VirtualMachine::new(&mut parser);
+        let mut vm = VirtualMachine::new(&mut compiler);
         assert_eq!(
             vm.interpret(),
             InterpretResult::RuntimeError,

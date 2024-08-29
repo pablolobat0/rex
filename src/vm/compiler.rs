@@ -11,11 +11,11 @@ use crate::common::{
 use super::chunk::{Chunk, OpCode, Value};
 
 // Function types for prefix and infix parsing
-type PrefixParseFn = fn(&mut Parser);
-type InfixParseFn = fn(&mut Parser);
+type PrefixParseFn = fn(&mut Compiler);
+type InfixParseFn = fn(&mut Compiler);
 
 #[derive(Debug)]
-pub struct Parser<'a> {
+pub struct Compiler<'a> {
     lexer: &'a mut Lexer<'a>,
     current_token: Token,
     peek_token: Token,
@@ -26,12 +26,12 @@ pub struct Parser<'a> {
     precedences: HashMap<TokenType, Precedence>,
 }
 
-impl<'a> Parser<'a> {
-    pub fn new(lexer: &'a mut Lexer<'a>) -> Parser<'a> {
+impl<'a> Compiler<'a> {
+    pub fn new(lexer: &'a mut Lexer<'a>) -> Compiler<'a> {
         let current_token = lexer.next_token();
         let peek_token = lexer.next_token();
 
-        let mut parser = Parser {
+        let mut compiler = Compiler {
             lexer,
             current_token,
             peek_token,
@@ -43,27 +43,28 @@ impl<'a> Parser<'a> {
         };
 
         // Prefix functions
-        parser.register_prefix(TokenType::Integer, number);
-        parser.register_prefix(TokenType::Float, number);
-        parser.register_prefix(TokenType::String, literal);
-        parser.register_prefix(TokenType::True, literal);
-        parser.register_prefix(TokenType::False, literal);
-        parser.register_prefix(TokenType::Null, literal);
-        parser.register_prefix(TokenType::Minus, prefix_expression);
-        parser.register_prefix(TokenType::Bang, prefix_expression);
+        compiler.register_prefix(TokenType::Identifier, identifier);
+        compiler.register_prefix(TokenType::Integer, number);
+        compiler.register_prefix(TokenType::Float, number);
+        compiler.register_prefix(TokenType::String, literal);
+        compiler.register_prefix(TokenType::True, literal);
+        compiler.register_prefix(TokenType::False, literal);
+        compiler.register_prefix(TokenType::Null, literal);
+        compiler.register_prefix(TokenType::Minus, prefix_expression);
+        compiler.register_prefix(TokenType::Bang, prefix_expression);
         // Infix functions
-        parser.register_infix(TokenType::Plus, infix_expression);
-        parser.register_infix(TokenType::Minus, infix_expression);
-        parser.register_infix(TokenType::Star, infix_expression);
-        parser.register_infix(TokenType::Slash, infix_expression);
-        parser.register_infix(TokenType::EqualEqual, infix_expression);
-        parser.register_infix(TokenType::BangEqual, infix_expression);
-        parser.register_infix(TokenType::Greater, infix_expression);
-        parser.register_infix(TokenType::GreaterEqual, infix_expression);
-        parser.register_infix(TokenType::Less, infix_expression);
-        parser.register_infix(TokenType::LessEqual, infix_expression);
+        compiler.register_infix(TokenType::Plus, infix_expression);
+        compiler.register_infix(TokenType::Minus, infix_expression);
+        compiler.register_infix(TokenType::Star, infix_expression);
+        compiler.register_infix(TokenType::Slash, infix_expression);
+        compiler.register_infix(TokenType::EqualEqual, infix_expression);
+        compiler.register_infix(TokenType::BangEqual, infix_expression);
+        compiler.register_infix(TokenType::Greater, infix_expression);
+        compiler.register_infix(TokenType::GreaterEqual, infix_expression);
+        compiler.register_infix(TokenType::Less, infix_expression);
+        compiler.register_infix(TokenType::LessEqual, infix_expression);
 
-        parser
+        compiler
     }
 
     fn register_prefix(&mut self, token_type: TokenType, func: PrefixParseFn) {
@@ -153,73 +154,80 @@ impl<'a> Parser<'a> {
 
 // Prefix parsing functions
 
-fn number(parser: &mut Parser) {
+fn identifier(compiler: &mut Compiler) {
+    let index = compiler
+        .current_chunk
+        .add_constant(Value::String(compiler.current_token.lexeme.clone()));
+    compiler.emit_bytecode(OpCode::GetGlobal(index));
+}
+
+fn number(compiler: &mut Compiler) {
     let value = Value::Number(
-        parser
+        compiler
             .current_token
             .lexeme
             .parse()
             .expect("Not a valid number"),
     );
-    let index = parser.current_chunk.add_constant(value);
-    parser.emit_bytecode(OpCode::Constant(index));
+    let index = compiler.current_chunk.add_constant(value);
+    compiler.emit_bytecode(OpCode::Constant(index));
 }
 
-fn literal(parser: &mut Parser) {
-    match parser.current_token.kind {
+fn literal(compiler: &mut Compiler) {
+    match compiler.current_token.kind {
         TokenType::String => {
-            let index = parser
+            let index = compiler
                 .current_chunk
-                .add_constant(Value::String(parser.current_token.lexeme.clone()));
-            parser.emit_bytecode(OpCode::Constant(index));
+                .add_constant(Value::String(compiler.current_token.lexeme.clone()));
+            compiler.emit_bytecode(OpCode::Constant(index));
         }
-        TokenType::True => parser.emit_bytecode(OpCode::True),
-        TokenType::False => parser.emit_bytecode(OpCode::False),
-        TokenType::Null => parser.emit_bytecode(OpCode::Null),
+        TokenType::True => compiler.emit_bytecode(OpCode::True),
+        TokenType::False => compiler.emit_bytecode(OpCode::False),
+        TokenType::Null => compiler.emit_bytecode(OpCode::Null),
         _ => return,
     }
 }
 
-fn prefix_expression(parser: &mut Parser) {
-    let operator = parser.current_token.kind;
+fn prefix_expression(compiler: &mut Compiler) {
+    let operator = compiler.current_token.kind;
     // Consume current token
-    parser.next_token();
-    parser.expression(Precedence::Prefix);
+    compiler.next_token();
+    compiler.expression(Precedence::Prefix);
 
     match operator {
-        TokenType::Minus => parser.emit_bytecode(OpCode::Negate),
-        TokenType::Bang => parser.emit_bytecode(OpCode::Not),
-        _ => parser.add_error(
+        TokenType::Minus => compiler.emit_bytecode(OpCode::Negate),
+        TokenType::Bang => compiler.emit_bytecode(OpCode::Not),
+        _ => compiler.add_error(
             "Unknow prefix operator".to_string(),
-            parser.current_token.line,
+            compiler.current_token.line,
         ),
     }
 }
 
 // Infix parsing functions
 
-fn infix_expression(parser: &mut Parser) {
-    let operator = parser.current_token.kind;
-    let precedence = parser.current_precedence();
+fn infix_expression(compiler: &mut Compiler) {
+    let operator = compiler.current_token.kind;
+    let precedence = compiler.current_precedence();
     // Consume current token
-    parser.next_token();
+    compiler.next_token();
 
-    parser.expression(precedence);
+    compiler.expression(precedence);
 
     match operator {
-        TokenType::Plus => parser.emit_bytecode(OpCode::Add),
-        TokenType::Minus => parser.emit_bytecode(OpCode::Subtract),
-        TokenType::Star => parser.emit_bytecode(OpCode::Multiply),
-        TokenType::Slash => parser.emit_bytecode(OpCode::Divide),
-        TokenType::EqualEqual => parser.emit_bytecode(OpCode::Equal),
-        TokenType::BangEqual => parser.emit_bytecode(OpCode::NotEqual),
-        TokenType::Less => parser.emit_bytecode(OpCode::Less),
-        TokenType::LessEqual => parser.emit_bytecode(OpCode::LessEqual),
-        TokenType::Greater => parser.emit_bytecode(OpCode::Greater),
-        TokenType::GreaterEqual => parser.emit_bytecode(OpCode::GreaterEqual),
-        _ => parser.add_error(
+        TokenType::Plus => compiler.emit_bytecode(OpCode::Add),
+        TokenType::Minus => compiler.emit_bytecode(OpCode::Subtract),
+        TokenType::Star => compiler.emit_bytecode(OpCode::Multiply),
+        TokenType::Slash => compiler.emit_bytecode(OpCode::Divide),
+        TokenType::EqualEqual => compiler.emit_bytecode(OpCode::Equal),
+        TokenType::BangEqual => compiler.emit_bytecode(OpCode::NotEqual),
+        TokenType::Less => compiler.emit_bytecode(OpCode::Less),
+        TokenType::LessEqual => compiler.emit_bytecode(OpCode::LessEqual),
+        TokenType::Greater => compiler.emit_bytecode(OpCode::Greater),
+        TokenType::GreaterEqual => compiler.emit_bytecode(OpCode::GreaterEqual),
+        _ => compiler.add_error(
             "Unknow infix operator".to_string(),
-            parser.current_token.line,
+            compiler.current_token.line,
         ),
     }
 }
