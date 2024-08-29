@@ -17,6 +17,9 @@ pub enum OpCode {
     Multiply,
     Divide,
     Return,
+    Pop,
+    DefineGlobal(usize),
+    GetGlobal(usize),
 }
 
 #[derive(Debug, Clone, PartialEq)]

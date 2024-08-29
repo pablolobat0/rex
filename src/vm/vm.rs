@@ -10,6 +10,7 @@ pub struct VirtualMachine<'a> {
     pc: usize,
     pub stack: Vec<Value>,
     compiler: &'a mut Compiler<'a>,
+    pub globals: HashMap<String, Value>,
 }
 
 #[derive(Debug, PartialEq)]
@@ -25,6 +26,7 @@ impl<'a> VirtualMachine<'a> {
             pc: 0,
             stack: vec![],
             compiler,
+            globals: HashMap::new(),
         }
     }
     pub fn compile_and_run(&mut self) -> InterpretResult {
@@ -135,6 +137,30 @@ impl<'a> VirtualMachine<'a> {
                         _ => return InterpretResult::RuntimeError,
                     },
                     OpCode::Return => return InterpretResult::Ok,
+                    OpCode::Pop => {
+                        self.stack.pop();
+                    }
+                    OpCode::DefineGlobal(index) => {
+                        match (
+                            self.compiler.current_chunk.get_constant(*index),
+                            self.stack.last(),
+                        ) {
+                            (Some(Value::String(name)), Some(last)) => {
+                                self.globals.insert(name.clone(), last.clone());
+                            }
+                            (_, _) => return InterpretResult::RuntimeError,
+                        }
+                    }
+                    OpCode::GetGlobal(index) => {
+                        if let Some(Value::String(value)) =
+                            self.compiler.current_chunk.get_constant(*index)
+                        {
+                            match self.globals.get(value) {
+                                Some(value) => self.stack.push(value.clone()),
+                                None => return InterpretResult::RuntimeError,
+                            };
+                        }
+                    }
                 },
                 None => break,
             }

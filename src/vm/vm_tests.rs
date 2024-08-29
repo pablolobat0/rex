@@ -212,4 +212,26 @@ mod test {
     fn test_string_concatenation() {
         test_string("\"hola\" + \" mundo\"", "hola mundo".to_string());
     }
+
+    #[test]
+    fn test_define_global() {
+        let input = "let a = 1";
+
+        let mut lexer = Lexer::new(input);
+        let mut compiler = Compiler::new(&mut lexer);
+
+        compiler.compile();
+
+        check_compiler_errors(&compiler);
+
+        let mut vm = VirtualMachine::new(&mut compiler);
+
+        assert_eq!(
+            vm.interpret(),
+            InterpretResult::Ok,
+            "VM should run without errors"
+        );
+
+        assert_eq!(vm.globals.get("a"), Some(&Value::Number(1.0)));
+    }
 }

@@ -90,6 +90,14 @@ impl<'a> Compiler<'a> {
         }
     }
 
+    fn current_token_is(&self, token: TokenType) -> bool {
+        return self.current_token.kind == token;
+    }
+
+    fn peek_token_is(&self, token: TokenType) -> bool {
+        return self.peek_token.kind == token;
+    }
+
     fn peek_error(&mut self, expected_token: TokenType) {
         let message = format!(
             "Expected next token to be {}, got {} with lexeme {} instead",
@@ -102,15 +110,72 @@ impl<'a> Compiler<'a> {
         self.errors.push(format!("Line {}: {}", line, message));
     }
 
-    pub fn compile(&mut self) -> bool {
+    pub fn compile_one_expression(&mut self) -> bool {
         self.expression(Precedence::Lowest);
+        self.errors.len() == 0
+    }
+
+    pub fn compile(&mut self) -> bool {
+        while self.current_token.kind != TokenType::EOF {
+            self.statement();
+        }
         // Check compilation errors
         self.errors.len() == 0
+    }
+
+    fn statement(&mut self) {
+        match self.current_token.kind {
+            TokenType::Let => self.let_statement(),
+            _ => self.expression_statement(),
+        }
+    }
+
+    fn let_statement(&mut self) {
+        if !self.expect_peek(TokenType::Identifier) {
+            return;
+        }
+
+        let index = self
+            .current_chunk
+            .add_constant(Value::String(self.current_token.lexeme.clone()));
+
+        // Consume identifier
+        self.next_token();
+
+        if self.current_token_is(TokenType::Equal) {
+            // Consume =
+            self.next_token();
+            self.expression(Precedence::Lowest);
+        } else {
+            self.emit_bytecode(OpCode::Null);
+        }
+
+        self.parse_end_statement();
+
+        self.emit_bytecode(OpCode::DefineGlobal(index));
+    }
+
+    fn parse_end_statement(&mut self) {
+        if !self.peek_token_is(TokenType::NewLine) && !self.peek_token_is(TokenType::EOF) {
+            self.add_error(
+                format!(
+                    "Wrong expression end, expected new line of eof, got: {}",
+                    self.peek_token.lexeme
+                ),
+                self.peek_token.line,
+            );
+        }
+        self.next_token();
     }
 
     pub fn emit_bytecode(&mut self, byte: OpCode) {
         self.current_chunk
             .write(byte, self.current_token.line as usize);
+    }
+    fn expression_statement(&mut self) {
+        self.expression(Precedence::Lowest);
+        self.parse_end_statement();
+        self.emit_bytecode(OpCode::Pop);
     }
 
     fn expression(&mut self, precedence: Precedence) {
