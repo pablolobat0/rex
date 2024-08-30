@@ -125,7 +125,7 @@ impl<'a> Compiler<'a> {
     pub fn compile(&mut self) -> bool {
         while self.current_token.kind != TokenType::EOF {
             self.statement();
-            self.parse_end_statement();
+            self.next_token();
         }
         // Check compilation errors
         self.errors.len() == 0
@@ -153,10 +153,13 @@ impl<'a> Compiler<'a> {
         if self.current_token_is(TokenType::Equal) {
             // Consume =
             self.next_token();
+
             self.expression(Precedence::Lowest);
         } else {
             self.emit_bytecode(OpCode::Null);
         }
+
+        self.parse_end_statement();
 
         self.emit_bytecode(OpCode::DefineGlobal(index));
     }
@@ -165,13 +168,14 @@ impl<'a> Compiler<'a> {
         if !self.peek_token_is(TokenType::NewLine) && !self.peek_token_is(TokenType::EOF) {
             self.add_error(
                 format!(
-                    "Wrong expression end, expected new line of eof, got: {}",
+                    "Wrong expression end, expected new line or EOF, got: {}",
                     self.peek_token.lexeme
                 ),
                 self.peek_token.line,
             );
+        } else {
+            self.next_token();
         }
-        self.next_token();
     }
 
     pub fn emit_bytecode(&mut self, byte: OpCode) {
@@ -180,6 +184,7 @@ impl<'a> Compiler<'a> {
     }
     fn expression_statement(&mut self) {
         self.expression(Precedence::Lowest);
+        self.parse_end_statement();
         self.emit_bytecode(OpCode::Pop);
     }
 
@@ -189,7 +194,7 @@ impl<'a> Compiler<'a> {
         match prefix_fn {
             Some(function) => function(self),
             None => self.add_error(
-                "Unknow prefix operator".to_string(),
+                format!("Unknow prefix operator {}", self.current_token.lexeme),
                 self.current_token.line,
             ),
         }
@@ -200,9 +205,10 @@ impl<'a> Compiler<'a> {
             let infix_fn = self.infix_parse_fns.get(&self.current_token.kind);
             match infix_fn {
                 Some(function) => function(self),
-                None => {
-                    self.add_error("Unknow infix operator".to_string(), self.current_token.line)
-                }
+                None => self.add_error(
+                    format!("Unknow infix operator {}", self.current_token.lexeme),
+                    self.current_token.line,
+                ),
             }
         }
     }
@@ -228,7 +234,18 @@ fn identifier(compiler: &mut Compiler) {
     let index = compiler
         .current_chunk
         .add_constant(Value::String(compiler.current_token.lexeme.clone()));
-    compiler.emit_bytecode(OpCode::GetGlobal(index));
+    if compiler.peek_token_is(TokenType::Equal) {
+        // Consume Identifier
+        compiler.next_token();
+
+        // Consume =
+        compiler.next_token();
+
+        compiler.expression(Precedence::Assigment);
+        compiler.emit_bytecode(OpCode::SetGlobal(index));
+    } else {
+        compiler.emit_bytecode(OpCode::GetGlobal(index));
+    }
 }
 
 fn number(compiler: &mut Compiler) {
@@ -268,7 +285,7 @@ fn prefix_expression(compiler: &mut Compiler) {
         TokenType::Minus => compiler.emit_bytecode(OpCode::Negate),
         TokenType::Bang => compiler.emit_bytecode(OpCode::Not),
         _ => compiler.add_error(
-            "Unknow prefix operator".to_string(),
+            format!("Unknow prefix operator {}", compiler.current_token.lexeme),
             compiler.current_token.line,
         ),
     }
@@ -296,7 +313,7 @@ fn infix_expression(compiler: &mut Compiler) {
         TokenType::Greater => compiler.emit_bytecode(OpCode::Greater),
         TokenType::GreaterEqual => compiler.emit_bytecode(OpCode::GreaterEqual),
         _ => compiler.add_error(
-            "Unknow infix operator".to_string(),
+            format!("Unknow prefix operator {}", compiler.current_token.lexeme),
             compiler.current_token.line,
         ),
     }

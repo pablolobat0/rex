@@ -159,13 +159,27 @@ impl<'a> VirtualMachine<'a> {
                         }
                     }
                     OpCode::GetGlobal(index) => {
-                        if let Some(Value::String(value)) =
+                        if let Some(Value::String(name)) =
                             self.compiler.current_chunk.get_constant(*index)
                         {
-                            match self.globals.get(value) {
+                            match self.globals.get(name) {
                                 Some(value) => self.stack.push(value.clone()),
                                 None => return InterpretResult::RuntimeError,
                             };
+                        } else {
+                            return InterpretResult::RuntimeError;
+                        }
+                    }
+                    OpCode::SetGlobal(index) => {
+                        if let Some(Value::String(name)) =
+                            self.compiler.current_chunk.get_constant(*index)
+                        {
+                            match self.stack.pop() {
+                                Some(value) => self.globals.insert(name.to_string(), value),
+                                None => return InterpretResult::RuntimeError,
+                            };
+                        } else {
+                            return InterpretResult::RuntimeError;
                         }
                     }
                 },

@@ -234,4 +234,48 @@ mod test {
 
         assert_eq!(vm.globals.get("a"), Some(&Value::Number(1.0)));
     }
+
+    #[test]
+    fn test_get_global() {
+        let input = "let a = 1\nlet b = a + 3";
+
+        let mut lexer = Lexer::new(input);
+        let mut compiler = Compiler::new(&mut lexer);
+
+        compiler.compile();
+
+        check_compiler_errors(&compiler);
+
+        let mut vm = VirtualMachine::new(&mut compiler);
+
+        assert_eq!(
+            vm.interpret(),
+            InterpretResult::Ok,
+            "VM should run without errors"
+        );
+
+        assert_eq!(vm.globals.get("b"), Some(&Value::Number(4.0)));
+    }
+
+    #[test]
+    fn test_set_global() {
+        let input = "let a = 1\na = 3";
+
+        let mut lexer = Lexer::new(input);
+        let mut compiler = Compiler::new(&mut lexer);
+
+        compiler.compile();
+
+        check_compiler_errors(&compiler);
+
+        let mut vm = VirtualMachine::new(&mut compiler);
+
+        assert_eq!(
+            vm.interpret(),
+            InterpretResult::Ok,
+            "VM should run without errors"
+        );
+
+        assert_eq!(vm.globals.get("a"), Some(&Value::Number(3.0)));
+    }
 }
