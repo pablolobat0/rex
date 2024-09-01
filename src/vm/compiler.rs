@@ -15,6 +15,65 @@ type PrefixParseFn = fn(&mut Compiler);
 type InfixParseFn = fn(&mut Compiler);
 
 #[derive(Debug)]
+struct Local {
+    name: Token,
+    depth: i32,
+}
+
+#[derive(Debug)]
+struct Scope {
+    locals: Vec<Local>,
+    depth: i32,
+}
+
+impl Scope {
+    fn new() -> Scope {
+        Scope {
+            locals: vec![],
+            depth: 0,
+        }
+    }
+
+    fn begin_scope(&mut self) {
+        self.depth += 1;
+    }
+
+    fn end_scope(&mut self) -> u32 {
+        self.depth -= 1;
+
+        // Remove variables that are out of the current scope
+        let mut counter = 0;
+        self.locals.retain(|local| {
+            if local.depth > self.depth {
+                counter += 1;
+                false
+            } else {
+                true
+            }
+        });
+
+        counter
+    }
+
+    fn add_local(&mut self, name: Token) {
+        let local = Local {
+            name,
+            depth: -1, // Mark uninitialized
+        };
+        self.locals.push(local);
+    }
+
+    fn resolve_local(&self, name: &Token) -> Option<usize> {
+        // Check name and if it's initialized
+        self.locals
+            .iter()
+            .rev()
+            .position(|local| local.name.lexeme == *name.lexeme && local.depth > -1)
+            .map(|rev_index| self.locals.len() - 1 - rev_index)
+    }
+}
+
+#[derive(Debug)]
 pub struct Compiler<'a> {
     lexer: &'a mut Lexer<'a>,
     current_token: Token,
@@ -24,6 +83,7 @@ pub struct Compiler<'a> {
     prefix_parse_fns: HashMap<TokenType, PrefixParseFn>,
     infix_parse_fns: HashMap<TokenType, InfixParseFn>,
     precedences: HashMap<TokenType, Precedence>,
+    current_scope: Scope,
 }
 
 impl<'a> Compiler<'a> {
@@ -40,6 +100,7 @@ impl<'a> Compiler<'a> {
             prefix_parse_fns: HashMap::new(),
             infix_parse_fns: HashMap::new(),
             precedences: create_precedences(),
+            current_scope: Scope::new(),
         };
 
         // Prefix functions
@@ -118,6 +179,7 @@ impl<'a> Compiler<'a> {
     fn one_statement(&mut self) {
         match self.current_token.kind {
             TokenType::Let => self.let_statement(),
+            TokenType::LeftBrace => self.block(),
             _ => self.expression(Precedence::Lowest),
         }
     }
@@ -134,6 +196,7 @@ impl<'a> Compiler<'a> {
     fn statement(&mut self) {
         match self.current_token.kind {
             TokenType::Let => self.let_statement(),
+            TokenType::LeftBrace => self.block(),
             _ => self.expression_statement(),
         }
     }
@@ -143,14 +206,20 @@ impl<'a> Compiler<'a> {
             return;
         }
 
-        let index = self
-            .current_chunk
-            .add_constant(Value::String(self.current_token.lexeme.clone()));
+        self.declare_variable();
 
-        // Consume identifier
-        self.next_token();
+        let index = if self.current_scope.depth == 0 {
+            Some(
+                self.current_chunk
+                    .add_constant(Value::String(self.current_token.lexeme.clone())),
+            )
+        } else {
+            None
+        };
 
-        if self.current_token_is(TokenType::Equal) {
+        if self.peek_token_is(TokenType::Equal) {
+            // Consume identifier
+            self.next_token();
             // Consume =
             self.next_token();
 
@@ -161,7 +230,56 @@ impl<'a> Compiler<'a> {
 
         self.parse_end_statement();
 
-        self.emit_bytecode(OpCode::DefineGlobal(index));
+        if let Some(index) = index {
+            self.emit_bytecode(OpCode::DefineGlobal(index));
+        } else {
+            // Remove uninitialized mark
+            let last_local_index = self.current_scope.locals.len() - 1;
+            self.current_scope.locals[last_local_index].depth = self.current_scope.depth;
+        }
+    }
+
+    fn declare_variable(&mut self) {
+        if self.current_scope.depth == 0 {
+            return;
+        }
+
+        let has_existing_variable = self.current_scope.locals.iter().rev().any(|local| {
+            local.depth == self.current_scope.depth
+                && local.name.lexeme == self.current_token.lexeme
+        });
+
+        if has_existing_variable {
+            self.add_error(
+                "Already a variable with this name in this scope.".to_string(),
+                self.current_token.line,
+            );
+        }
+
+        self.current_scope.add_local(self.current_token.clone());
+    }
+
+    fn block(&mut self) {
+        self.expect_peek(TokenType::NewLine);
+        // Consume new line
+        self.next_token();
+
+        self.current_scope.begin_scope();
+
+        // Parse all the statements in current block
+        while !self.current_token_is(TokenType::RightBrace)
+            && !self.current_token_is(TokenType::EOF)
+        {
+            self.statement();
+            self.next_token();
+        }
+
+        let counter = self.current_scope.end_scope();
+        for _ in 0..counter {
+            self.emit_bytecode(OpCode::Pop);
+        }
+
+        self.parse_end_statement();
     }
 
     fn parse_end_statement(&mut self) {
@@ -231,9 +349,23 @@ impl<'a> Compiler<'a> {
 // Prefix parsing functions
 
 fn identifier(compiler: &mut Compiler) {
-    let index = compiler
-        .current_chunk
-        .add_constant(Value::String(compiler.current_token.lexeme.clone()));
+    let get_op;
+    let set_op;
+
+    if let Some(position) = compiler
+        .current_scope
+        .resolve_local(&compiler.current_token)
+    {
+        get_op = OpCode::GetLocal(position);
+        set_op = OpCode::SetLocal(position);
+    } else {
+        let index = compiler
+            .current_chunk
+            .add_constant(Value::String(compiler.current_token.lexeme.clone()));
+        get_op = OpCode::GetGlobal(index);
+        set_op = OpCode::SetGlobal(index);
+    }
+
     if compiler.peek_token_is(TokenType::Equal) {
         // Consume Identifier
         compiler.next_token();
@@ -242,9 +374,9 @@ fn identifier(compiler: &mut Compiler) {
         compiler.next_token();
 
         compiler.expression(Precedence::Assigment);
-        compiler.emit_bytecode(OpCode::SetGlobal(index));
+        compiler.emit_bytecode(set_op);
     } else {
-        compiler.emit_bytecode(OpCode::GetGlobal(index));
+        compiler.emit_bytecode(get_op);
     }
 }
 

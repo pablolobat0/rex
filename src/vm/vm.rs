@@ -182,6 +182,13 @@ impl<'a> VirtualMachine<'a> {
                             return InterpretResult::RuntimeError;
                         }
                     }
+                    OpCode::GetLocal(index) => {
+                        self.stack.push(self.stack[*index].clone());
+                    }
+                    OpCode::SetLocal(index) => {
+                        self.stack[*index] = self.stack[self.stack.len() - 1].clone();
+                        println!("{}", self.stack[*index]);
+                    }
                 },
                 None => break,
             }

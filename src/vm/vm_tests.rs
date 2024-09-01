@@ -278,4 +278,109 @@ mod test {
 
         assert_eq!(vm.globals.get("a"), Some(&Value::Number(3.0)));
     }
+
+    #[test]
+    fn test_define_local() {
+        let input = "{
+                    let a = 14
+                   }";
+
+        let mut lexer = Lexer::new(input);
+        let mut compiler = Compiler::new(&mut lexer);
+
+        compiler.compile_one_statement();
+
+        check_compiler_errors(&compiler);
+        assert_eq!(
+            compiler.current_chunk.code,
+            vec![OpCode::Constant(0), OpCode::Pop]
+        );
+
+        assert_eq!(
+            compiler.current_chunk.constants.get(0),
+            Some(&Value::Number(14.0))
+        );
+
+        let mut vm = VirtualMachine::new(&mut compiler);
+
+        assert_eq!(
+            vm.interpret(),
+            InterpretResult::Ok,
+            "VM should run without errors"
+        );
+
+        assert_eq!(vm.globals.get("a"), None);
+    }
+
+    #[test]
+    fn test_get_local() {
+        let input = "{ 
+                    let a = 14
+                    let b = a
+                    b
+                    }";
+
+        let mut lexer = Lexer::new(input);
+        let mut compiler = Compiler::new(&mut lexer);
+
+        compiler.compile();
+
+        assert_eq!(
+            compiler.current_chunk.code,
+            vec![
+                OpCode::Constant(0),
+                OpCode::GetLocal(0),
+                OpCode::GetLocal(1),
+                OpCode::Pop,
+                OpCode::Pop,
+                OpCode::Pop
+            ]
+        );
+
+        check_compiler_errors(&compiler);
+
+        let mut vm = VirtualMachine::new(&mut compiler);
+
+        assert_eq!(
+            vm.interpret(),
+            InterpretResult::Ok,
+            "VM should run without errors"
+        );
+    }
+    #[test]
+    fn test_set_local() {
+        let input = "{ 
+                    let a = 14
+                    let b = a
+                    b = 15
+                    }";
+
+        let mut lexer = Lexer::new(input);
+        let mut compiler = Compiler::new(&mut lexer);
+
+        compiler.compile();
+
+        check_compiler_errors(&compiler);
+
+        assert_eq!(
+            compiler.current_chunk.code,
+            vec![
+                OpCode::Constant(0),
+                OpCode::GetLocal(0),
+                OpCode::Constant(1),
+                OpCode::SetLocal(1),
+                OpCode::Pop,
+                OpCode::Pop,
+                OpCode::Pop
+            ]
+        );
+
+        let mut vm = VirtualMachine::new(&mut compiler);
+
+        assert_eq!(
+            vm.interpret(),
+            InterpretResult::Ok,
+            "VM should run without errors"
+        );
+    }
 }
