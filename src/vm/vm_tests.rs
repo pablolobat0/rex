@@ -448,4 +448,31 @@ mod test {
             assert_eq!(vm.globals.get("a"), Some(result));
         }
     }
+
+    #[test]
+    fn test_while_statement() {
+        let input = " 
+                    let a = 1
+                    while a != 10 {
+                        a = a + 1
+                    }
+                    ";
+
+        let mut lexer = Lexer::new(input);
+        let mut compiler = Compiler::new(&mut lexer);
+
+        compiler.compile();
+
+        check_compiler_errors(&compiler);
+
+        let mut vm = VirtualMachine::new(&mut compiler);
+
+        assert_eq!(
+            vm.interpret(),
+            InterpretResult::Ok,
+            "VM should run without errors"
+        );
+
+        assert_eq!(vm.globals.get("a"), Some(&Value::Number(10.0)));
+    }
 }

@@ -186,6 +186,7 @@ impl<'a> Compiler<'a> {
             TokenType::LeftBrace => self.block(),
             TokenType::If => self.if_statement(),
             TokenType::NewLine => return,
+            TokenType::While => self.while_statement(),
             _ => self.expression_statement(),
         }
     }
@@ -321,6 +322,31 @@ impl<'a> Compiler<'a> {
         } else {
             panic!("Expected a jump instruction at the given offset.");
         }
+    }
+
+    fn while_statement(&mut self) {
+        // Consume while
+        self.next_token();
+
+        // Consume condition
+        self.expression(Precedence::Lowest);
+
+        // Emit the conditional jump
+        let while_jump = self.current_chunk.code.len();
+        self.emit_bytecode(OpCode::JumpIfFalse(0));
+
+        self.emit_bytecode(OpCode::Pop);
+
+        self.next_token();
+
+        // Consume loop body
+        self.statement();
+
+        self.emit_bytecode(OpCode::Loop(self.current_chunk.code.len() - 1));
+        self.emit_bytecode(OpCode::Pop);
+
+        // Patch the jump to point to the code after the while loop
+        self.patch_jump(while_jump);
     }
 
     fn parse_end_statement(&mut self) {

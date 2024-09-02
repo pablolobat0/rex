@@ -197,6 +197,9 @@ impl<'a> VirtualMachine<'a> {
                     OpCode::Jump(target) => {
                         self.pc += target;
                     }
+                    OpCode::Loop(target) => {
+                        self.pc -= *target;
+                    }
                 },
                 None => break,
             }
