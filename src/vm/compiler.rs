@@ -171,19 +171,6 @@ impl<'a> Compiler<'a> {
         self.errors.push(format!("Line {}: {}", line, message));
     }
 
-    pub fn compile_one_statement(&mut self) -> bool {
-        self.one_statement();
-        self.errors.len() == 0
-    }
-
-    fn one_statement(&mut self) {
-        match self.current_token.kind {
-            TokenType::Let => self.let_statement(),
-            TokenType::LeftBrace => self.block(),
-            _ => self.expression(Precedence::Lowest),
-        }
-    }
-
     pub fn compile(&mut self) -> bool {
         while self.current_token.kind != TokenType::EOF {
             self.statement();
@@ -197,6 +184,8 @@ impl<'a> Compiler<'a> {
         match self.current_token.kind {
             TokenType::Let => self.let_statement(),
             TokenType::LeftBrace => self.block(),
+            TokenType::If => self.if_statement(),
+            TokenType::NewLine => return,
             _ => self.expression_statement(),
         }
     }
@@ -278,8 +267,60 @@ impl<'a> Compiler<'a> {
         for _ in 0..counter {
             self.emit_bytecode(OpCode::Pop);
         }
+    }
 
-        self.parse_end_statement();
+    fn if_statement(&mut self) {
+        // Consume 'if'
+        self.next_token();
+
+        // Parse the condition
+        self.expression(Precedence::Lowest);
+
+        // Emit the conditional jump
+        let then_jump = self.current_chunk.code.len();
+        self.emit_bytecode(OpCode::JumpIfFalse(0));
+
+        self.emit_bytecode(OpCode::Pop);
+
+        // Consume condition
+        self.next_token();
+
+        // Parse the 'then' branch
+        self.statement();
+
+        // Emit the else jump
+        let else_jump = self.current_chunk.code.len();
+        self.emit_bytecode(OpCode::Jump(0));
+
+        // Patch the jump to point to the code after the 'then' branch
+        self.patch_jump(then_jump);
+
+        self.emit_bytecode(OpCode::Pop);
+
+        if self.peek_token_is(TokenType::Else) {
+            // Consume else
+            self.next_token();
+
+            if self.expect_peek(TokenType::LeftBrace) {
+                self.block();
+            }
+        }
+
+        // Patch the jump to point to the code after the 'else' branch
+        self.patch_jump(else_jump);
+    }
+
+    fn patch_jump(&mut self, jump_offset: usize) {
+        // Calcula el valor del salto, ajustado por los bytes de la instrucción de salto en sí.
+        let jump = self.current_chunk.code.len() - jump_offset - 1;
+
+        if let OpCode::JumpIfFalse(ref mut target) = self.current_chunk.code[jump_offset] {
+            *target = jump;
+        } else if let OpCode::Jump(ref mut target) = self.current_chunk.code[jump_offset] {
+            *target = jump;
+        } else {
+            panic!("Expected a jump instruction at the given offset.");
+        }
     }
 
     fn parse_end_statement(&mut self) {
@@ -343,6 +384,22 @@ impl<'a> Compiler<'a> {
             .precedences
             .get(&self.peek_token.kind)
             .unwrap_or(&Precedence::Lowest)
+    }
+
+    // Debug functions
+
+    pub fn compile_one_statement(&mut self) -> bool {
+        self.one_statement();
+        self.errors.len() == 0
+    }
+
+    fn one_statement(&mut self) {
+        match self.current_token.kind {
+            TokenType::Let => self.let_statement(),
+            TokenType::LeftBrace => self.block(),
+            TokenType::If => self.if_statement(),
+            _ => self.expression(Precedence::Lowest),
+        }
     }
 }
 

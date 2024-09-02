@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, usize};
 
 use crate::common::lexer::lexer::Lexer;
 
@@ -65,7 +65,7 @@ impl<'a> VirtualMachine<'a> {
                     OpCode::Null => self.stack.push(Value::Null),
                     OpCode::Not => {
                         if let Some(value) = self.stack.last_mut() {
-                            *value = Value::Boolean(is_falsey(value.clone()));
+                            *value = Value::Boolean(is_falsey(&value));
                         } else {
                             return InterpretResult::RuntimeError;
                         }
@@ -189,6 +189,14 @@ impl<'a> VirtualMachine<'a> {
                         self.stack[*index] = self.stack[self.stack.len() - 1].clone();
                         println!("{}", self.stack[*index]);
                     }
+                    OpCode::JumpIfFalse(target) => {
+                        if is_falsey(self.peek(0)) {
+                            self.pc += target;
+                        }
+                    }
+                    OpCode::Jump(target) => {
+                        self.pc += target;
+                    }
                 },
                 None => break,
             }
@@ -196,9 +204,14 @@ impl<'a> VirtualMachine<'a> {
 
         InterpretResult::Ok
     }
+
+    fn peek(&self, distance: usize) -> &Value {
+        let last_index = self.stack.len() - 1;
+        &self.stack[last_index - distance]
+    }
 }
 
-fn is_falsey(value: Value) -> bool {
+fn is_falsey(value: &Value) -> bool {
     match value {
         Value::Boolean(bool) => !bool,
         Value::Null => true,

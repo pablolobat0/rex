@@ -25,6 +25,8 @@ pub enum OpCode {
     SetGlobal(usize),
     GetLocal(usize),
     SetLocal(usize),
+    JumpIfFalse(usize),
+    Jump(usize),
 }
 
 #[derive(Debug, Clone, PartialEq)]

@@ -383,4 +383,77 @@ mod test {
             "VM should run without errors"
         );
     }
+
+    #[test]
+    fn test_if_true() {
+        let input = "if true {
+                        1
+                    }";
+
+        let mut lexer = Lexer::new(input);
+        let mut compiler = Compiler::new(&mut lexer);
+
+        compiler.compile();
+
+        check_compiler_errors(&compiler);
+
+        assert_eq!(
+            compiler.current_chunk.code,
+            vec![
+                OpCode::True,
+                OpCode::JumpIfFalse(4),
+                OpCode::Pop,
+                OpCode::Constant(0),
+                OpCode::Pop,
+                OpCode::Jump(1),
+                OpCode::Pop
+            ]
+        );
+
+        let mut vm = VirtualMachine::new(&mut compiler);
+
+        assert_eq!(
+            vm.interpret(),
+            InterpretResult::Ok,
+            "VM should run without errors"
+        );
+    }
+    #[test]
+    fn test_if_else_true() {
+        let input = "if true {
+                    1
+                 } else {
+                    2
+                 }";
+
+        let mut lexer = Lexer::new(input);
+        let mut compiler = Compiler::new(&mut lexer);
+
+        compiler.compile();
+
+        check_compiler_errors(&compiler);
+
+        assert_eq!(
+            compiler.current_chunk.code,
+            vec![
+                OpCode::True,
+                OpCode::JumpIfFalse(4),
+                OpCode::Pop,
+                OpCode::Constant(0),
+                OpCode::Pop,
+                OpCode::Jump(3),
+                OpCode::Pop,
+                OpCode::Constant(1),
+                OpCode::Pop
+            ]
+        );
+
+        let mut vm = VirtualMachine::new(&mut compiler);
+
+        assert_eq!(
+            vm.interpret(),
+            InterpretResult::Ok,
+            "VM should run without errors"
+        );
+    }
 }
