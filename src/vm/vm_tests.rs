@@ -386,74 +386,66 @@ mod test {
 
     #[test]
     fn test_if_true() {
-        let input = "if true {
-                        1
-                    }";
+        let tests = vec![
+            // Caso 1: if true
+            (
+                "
+            let a = 1
+            if true {
+                a = 2
+            }",
+                &Value::Number(2.0),
+            ),
+            // Caso 2: if false
+            (
+                "
+            let a = 1
+            if false {
+                a = 2
+            }",
+                &Value::Number(1.0),
+            ),
+            // Caso 3: if true else
+            (
+                "
+            let a = 1
+            if true {
+                a = 2
+            } else {
+                a = 3
+            }",
+                &Value::Number(2.0),
+            ),
+            // Caso 4: if false else
+            (
+                "
+            let a = 1
+            if false {
+                a = 2
+            } else {
+                a = 3
+            }",
+                &Value::Number(3.0),
+            ),
+        ];
 
-        let mut lexer = Lexer::new(input);
-        let mut compiler = Compiler::new(&mut lexer);
+        for (input, result) in tests {
+            let mut lexer = Lexer::new(input);
+            let mut compiler = Compiler::new(&mut lexer);
 
-        compiler.compile();
+            compiler.compile();
 
-        check_compiler_errors(&compiler);
+            check_compiler_errors(&compiler);
 
-        assert_eq!(
-            compiler.current_chunk.code,
-            vec![
-                OpCode::True,
-                OpCode::JumpIfFalse(4),
-                OpCode::Pop,
-                OpCode::Constant(0),
-                OpCode::Pop,
-                OpCode::Jump(1),
-                OpCode::Pop
-            ]
-        );
+            let mut vm = VirtualMachine::new(&mut compiler);
 
-        let mut vm = VirtualMachine::new(&mut compiler);
+            assert_eq!(
+                vm.interpret(),
+                InterpretResult::Ok,
+                "VM should run without errors"
+            );
 
-        assert_eq!(
-            vm.interpret(),
-            InterpretResult::Ok,
-            "VM should run without errors"
-        );
-    }
-    #[test]
-    fn test_if_else_true() {
-        let input = "if true {
-                    1
-                 } else {
-                    2
-                 }";
-
-        let mut lexer = Lexer::new(input);
-        let mut compiler = Compiler::new(&mut lexer);
-
-        compiler.compile();
-
-        check_compiler_errors(&compiler);
-
-        assert_eq!(
-            compiler.current_chunk.code,
-            vec![
-                OpCode::True,
-                OpCode::JumpIfFalse(4),
-                OpCode::Pop,
-                OpCode::Constant(0),
-                OpCode::Pop,
-                OpCode::Jump(3),
-                OpCode::Pop,
-                OpCode::Constant(1),
-                OpCode::Pop
-            ]
-        );
-
-        let mut vm = VirtualMachine::new(&mut compiler);
-
-        assert_eq!(
-            vm.interpret(),
-            InterpretResult::Ok,
-            "VM should run without errors"
-        );
+            assert_eq!(vm.globals.get("a"), Some(result));
+        }
     }
 }
