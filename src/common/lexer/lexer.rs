@@ -1,5 +1,6 @@
 use crate::common::lexer::token::{Token, TokenType};
 use std::collections::HashMap;
+use std::iter::Peekable;
 use std::str::Chars;
 
 use super::token::keywords;
@@ -7,11 +8,11 @@ use super::token::keywords;
 #[derive(Debug)]
 pub struct Lexer<'a> {
     input: &'a str,
-    chars: Chars<'a>,
+    // Using Peekable not to use clones
+    chars: Peekable<Chars<'a>>,
     // Byte position in the input
     position: usize,
     current_char: Option<char>,
-    next_char: Option<char>,
     // Line number starting at 1
     line: u32,
     keywords: HashMap<&'static str, TokenType>,
@@ -19,15 +20,13 @@ pub struct Lexer<'a> {
 
 impl<'a> Lexer<'a> {
     pub fn new(input: &'a str) -> Self {
-        let mut chars = input.chars();
+        let mut chars = input.chars().peekable();
         let current_char = chars.next();
-        let next_char = chars.clone().next();
         Lexer {
             input,
             chars,
             position: 0,
             current_char,
-            next_char,
             line: 1,
             keywords: keywords(),
         }
@@ -40,12 +39,11 @@ impl<'a> Lexer<'a> {
         }
 
         self.current_char = self.chars.next();
-        self.next_char = self.chars.clone().next();
     }
 
     // Return the next char without advancing
-    fn peek_char(&self) -> Option<char> {
-        self.next_char.clone()
+    fn peek_char(&mut self) -> Option<char> {
+        self.chars.peek().copied()
     }
 
     fn skip_whitespaces(&mut self) {
