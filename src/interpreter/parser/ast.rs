@@ -6,23 +6,6 @@ pub enum Node {
     Statement(Statement),
 }
 
-impl Node {
-    pub fn get_lexeme(&self) -> String {
-        match self {
-            Node::Program(program) => program.get_lexeme(),
-            Node::Expression(expression) => expression.get_lexeme(),
-            Node::Statement(statement) => statement.get_lexeme(),
-        }
-    }
-    pub fn to_string(&self) -> String {
-        match self {
-            Node::Program(program) => program.to_string(),
-            Node::Expression(expression) => expression.to_string(),
-            Node::Statement(statement) => statement.to_string(),
-        }
-    }
-}
-
 // Root node of the AST
 #[derive(Debug)]
 pub struct Program {
@@ -109,7 +92,8 @@ pub struct Identifier {
 }
 
 impl Identifier {
-    pub fn new(token: Token, name: String) -> Identifier {
+    pub fn new(token: Token) -> Identifier {
+        let name = token.lexeme.clone();
         Identifier { token, name }
     }
 

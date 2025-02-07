@@ -35,9 +35,9 @@ mod tests {
             ("x", 5),
             ("y", 10),
             ("foobar", 838383),
-            ("", 5),
-            ("", 15),
-            ("", 55),
+            ("return", 5),
+            ("return", 15),
+            ("return", 55),
         ];
 
         for (i, (expected_ident, expected_value)) in tests.iter().enumerate() {
@@ -56,6 +56,7 @@ mod tests {
             }
             Statement::Return(return_stmt) => {
                 assert_eq!(return_stmt.token.kind, TokenType::Return);
+                assert_eq!(return_stmt.token.lexeme, name);
                 assert_eq!(return_stmt.value.get_lexeme(), value.to_string());
             }
             _ => panic!("stmt is not a LetStatement. Got={:?}", stmt),
