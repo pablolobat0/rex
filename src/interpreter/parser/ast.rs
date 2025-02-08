@@ -29,6 +29,7 @@ impl Program {
         }
     }
 
+    #[cfg(test)]
     pub fn to_string(&self) -> String {
         self.statements
             .iter()
@@ -54,6 +55,7 @@ pub enum Expression {
 }
 
 impl Expression {
+    #[cfg(test)]
     pub fn get_lexeme(&self) -> String {
         match self {
             Expression::Identifier(identifier) => identifier.get_lexeme(),
@@ -97,6 +99,7 @@ impl Identifier {
         Identifier { token, name }
     }
 
+    #[cfg(test)]
     pub fn get_lexeme(&self) -> String {
         return self.token.lexeme.clone();
     }
@@ -113,6 +116,7 @@ pub struct IntegerLiteral {
 }
 
 impl IntegerLiteral {
+    #[cfg(test)]
     pub fn get_lexeme(&self) -> String {
         self.token.lexeme.clone()
     }
@@ -138,6 +142,7 @@ pub struct FloatLiteral {
 }
 
 impl FloatLiteral {
+    #[cfg(test)]
     pub fn get_lexeme(&self) -> String {
         self.token.lexeme.clone()
     }
@@ -151,6 +156,7 @@ impl FloatLiteral {
 }
 
 impl BooleanLiteral {
+    #[cfg(test)]
     pub fn get_lexeme(&self) -> String {
         self.token.lexeme.clone()
     }
@@ -174,6 +180,7 @@ impl StringLiteral {
         StringLiteral { token, value }
     }
 
+    #[cfg(test)]
     pub fn get_lexeme(&self) -> String {
         self.token.lexeme.clone()
     }
@@ -191,6 +198,7 @@ pub struct PrefixExpression {
 }
 
 impl PrefixExpression {
+    #[cfg(test)]
     fn get_lexeme(&self) -> String {
         self.token.lexeme.clone()
     }
@@ -217,6 +225,7 @@ pub struct InfixExpression {
 }
 
 impl InfixExpression {
+    #[cfg(test)]
     pub fn get_lexeme(&self) -> String {
         self.token.lexeme.clone()
     }
@@ -255,6 +264,7 @@ pub struct IfExpression {
 }
 
 impl IfExpression {
+    #[cfg(test)]
     pub fn get_lexeme(&self) -> String {
         self.token.lexeme.clone()
     }
@@ -300,6 +310,7 @@ pub struct FunctionLiteral {
 }
 
 impl FunctionLiteral {
+    #[cfg(test)]
     pub fn get_lexeme(&self) -> String {
         self.token.lexeme.clone()
     }
@@ -337,6 +348,7 @@ pub struct CallExpression {
 }
 
 impl CallExpression {
+    #[cfg(test)]
     pub fn get_lexeme(&self) -> String {
         self.token.lexeme.clone()
     }

@@ -1,3 +1,4 @@
+#[cfg(test)]
 mod test {
     use crate::{
         common::lexer::lexer::Lexer,
@@ -8,6 +9,7 @@ mod test {
         interpreter::parser::{ast::Node, parser::Parser},
     };
 
+    #[cfg(test)]
     fn test_eval(input: &str) -> Object {
         let lexer = Lexer::new(input);
         let mut parser = Parser::new(lexer);

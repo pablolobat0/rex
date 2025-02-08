@@ -13,8 +13,8 @@ pub fn interpret_ast(input: String) {
 
         let program = parser.parse_program();
 
-        if parser.get_errors().len() != 0 {
-            print_parser_errors(parser.get_errors());
+        if parser.errors.len() != 0 {
+            print_parser_errors(parser.errors);
             continue;
         }
 

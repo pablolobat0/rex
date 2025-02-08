@@ -44,8 +44,8 @@ pub fn start_ast() {
 
         let program = parser.parse_program();
 
-        if parser.get_errors().len() != 0 {
-            print_parser_errors(parser.get_errors());
+        if parser.errors.len() != 0 {
+            print_parser_errors(parser.errors);
             continue;
         }
 
@@ -68,7 +68,7 @@ pub fn start_vm() {
 
     loop {
         let mut input = String::new();
-        print!("> ");
+        print!("{}", PROMPT);
         io::stdout().flush().unwrap();
 
         io::stdin()

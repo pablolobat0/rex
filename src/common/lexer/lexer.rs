@@ -60,7 +60,7 @@ impl<'a> Lexer<'a> {
     pub fn next_token(&mut self) -> Token {
         self.skip_whitespaces();
 
-        let token = match self.current_char {
+        match self.current_char {
             Some('(') => {
                 self.read_char();
                 Token::new(TokenType::LeftParen, "(".to_string(), self.line)
@@ -194,9 +194,7 @@ impl<'a> Lexer<'a> {
                 }
             }
             None => Token::new(TokenType::EOF, "".to_string(), self.line),
-        };
-
-        token
+        }
     }
 
     fn read_one_line_comment(&mut self) {

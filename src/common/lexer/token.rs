@@ -45,8 +45,8 @@ pub enum TokenType {
     Null,
     // End of file
     EOF,
-    // Illegal
     Illegal,
+    Error,
 }
 
 impl fmt::Display for TokenType {
@@ -90,6 +90,7 @@ impl fmt::Display for TokenType {
             TokenType::Else => "else",
             TokenType::While => "while",
             TokenType::Null => "null",
+            TokenType::Error => "default",
         };
         write!(f, "{}", token_str)
     }
@@ -100,6 +101,16 @@ pub struct Token {
     pub kind: TokenType,
     pub lexeme: String,
     pub line: u32,
+}
+
+impl Default for Token {
+    fn default() -> Self {
+        Token {
+            kind: TokenType::Error,
+            lexeme: String::new(),
+            line: 0,
+        }
+    }
 }
 
 impl Token {
