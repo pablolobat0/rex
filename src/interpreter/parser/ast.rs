@@ -387,7 +387,7 @@ impl Statement {
             Statement::Return(statement) => statement.to_string(),
             Statement::Expression(statement) => statement.to_string(),
             Statement::Block(statement) => statement.to_string(),
-            Statement::While(statement) => statement.get_lexeme(),
+            Statement::While(statement) => statement.to_string(),
         }
     }
 }
@@ -531,7 +531,7 @@ impl WhileStatement {
     }
     pub fn to_string(&self) -> String {
         format!(
-            "{} {} {{ {} }}",
+            "{} {} {{\n{}\n}}",
             self.get_lexeme(),
             self.condition.to_string(),
             self.body.to_string()
