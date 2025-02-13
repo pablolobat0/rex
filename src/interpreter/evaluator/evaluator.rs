@@ -1,5 +1,3 @@
-use std::{cell::RefCell, rc::Rc};
-
 use super::object::{Environment, Function, Object};
 use crate::interpreter::parser::ast::{
     Expression, Identifier, IfExpression, Node, Statement, WhileStatement,
@@ -14,7 +12,6 @@ pub fn eval(node: Node, environment: &mut Environment) -> Object {
     match node {
         Node::Program(program) => eval_program_statements(program.statements, environment),
         Node::Expression(expression) => eval_expression(expression, environment),
-        Node::Statement(statement) => eval_statement(statement, environment),
     }
 }
 
@@ -22,7 +19,7 @@ fn eval_program_statements(statements: Vec<Statement>, environment: &mut Environ
     let mut result = NULL;
 
     for statement in statements {
-        result = eval(Node::Statement(statement), environment);
+        result = eval_statement(statement, environment);
         match result {
             // When find a return, stop evaluating and return the value
             Object::Return(return_value) => return *return_value,
@@ -50,61 +47,58 @@ fn eval_expression(expression: Expression, environment: &mut Environment) -> Obj
             return eval_prefix_expression(&prefix_expression.operator, right);
         }
         Expression::Infix(infix_expression) => {
-            let right = eval(
-                Node::Expression(*infix_expression.right.clone()),
-                environment,
-            );
+            let left_string = infix_expression.left.to_string();
+            let right_string = infix_expression.right.to_string();
+            let right = eval_expression(*infix_expression.right, environment);
             if is_error(&right) {
                 return right;
             }
 
-            let left = eval(
-                Node::Expression(*infix_expression.left.clone()),
-                environment,
-            );
-            if is_error(&left) {
-                return left;
-            }
-
+            // Check if it's an assignation
             if infix_expression.operator == "=".to_string() {
-                match *infix_expression.left {
-                    Expression::Identifier(identifier) => {
-                        environment.set(&identifier.name, right.clone());
-                        return NULL;
-                    }
-                    _ => {
+                let Expression::Identifier(identifier) = *infix_expression.left else {
                         return Object::Error(format!(
                             "Expected Identifier found {} {}",
-                            infix_expression.left.to_string(),
-                            infix_expression.right.to_string()
-                        ))
-                    }
+                            left_string, right_string
+                        ));
+                    };
+
+                let name = identifier.name.clone();
+                let object = eval_identifier(identifier, environment);
+                if is_error(&object) {
+                    return object;
                 }
+
+                environment.set(&name, right);
+                return NULL;
+            }
+
+            let left = eval_expression(*infix_expression.left, environment);
+            if is_error(&left) {
+                return left;
             }
 
             return eval_infix_expression(left, &infix_expression.operator, right);
         }
         Expression::If(if_expression) => eval_if_expression(if_expression, environment),
         Expression::Function(function_literal) => {
+            // New environment for the function
             return Object::Function(Function::new(
                 function_literal.parameters,
                 function_literal.body,
                 environment.clone(),
-            ))
+            ));
         }
         Expression::Call(call_expression) => {
-            let function = eval(Node::Expression(*call_expression.function), environment);
+            let function = eval_expression(*call_expression.function, environment);
             if is_error(&function) {
                 return function;
             }
 
-            let arguments = eval_expressions(call_expression.arguments, environment);
-
-            if arguments.len() == 1 && is_error(&arguments[0]) {
-                return arguments[0].clone();
+            match eval_expressions(call_expression.arguments, environment) {
+                Ok(arguments) => apply_function(function, arguments),
+                Err(error) => error,
             }
-
-            apply_function(function, arguments)
         }
     }
 }
@@ -113,7 +107,7 @@ fn eval_identifier(identifier: Identifier, environment: &mut Environment) -> Obj
     let object = environment.get(&identifier.name);
 
     match object {
-        Some(object) => object.clone(),
+        Some(object) => object,
         None => Object::Error(format!("identifier not found: {}", identifier.name)),
     }
 }
@@ -257,23 +251,17 @@ fn eval_string_infix_expression(left_value: String, operator: &str, right_value:
 
 fn eval_if_expression(node: IfExpression, environment: &mut Environment) -> Object {
     let condition = eval(Node::Expression(*node.condition), environment);
-    match condition {
-        Object::Boolean(_) => {}
-        _ => {
+    let Object::Boolean(_) = condition else {
             return Object::Error(format!(
                 "type mismatch, expected a BOOLEAN but found {}",
                 condition.object_type()
             ))
-        }
-    }
+    };
 
     if is_truthy(&condition) {
-        eval(
-            Node::Statement(Statement::Block(node.consequence)),
-            environment,
-        )
+        eval_block_statements(node.consequence.statements, environment)
     } else if let Some(alternative) = node.alternative {
-        eval(Node::Statement(Statement::Block(alternative)), environment)
+        eval_block_statements(alternative.statements, environment)
     } else {
         NULL
     }
@@ -286,35 +274,32 @@ fn is_truthy(object: &Object) -> bool {
     }
 }
 
-fn eval_expressions(expressions: Vec<Expression>, environment: &mut Environment) -> Vec<Object> {
+fn eval_expressions(
+    expressions: Vec<Expression>,
+    environment: &mut Environment,
+) -> Result<Vec<Object>, Object> {
     let mut result = vec![];
 
     for expression in expressions {
-        let object = eval(Node::Expression(expression), environment);
+        let object = eval_expression(expression, environment);
 
         if is_error(&object) {
-            return vec![object];
+            return Err(object);
         }
 
         result.push(object);
     }
 
-    result
+    Ok(result)
 }
 
 fn apply_function(function: Object, arguments: Vec<Object>) -> Object {
     match function {
         Object::Function(function) => {
-            let mut extended_env = extend_function_env(
-                &function,
-                arguments,
-                Rc::new(RefCell::new(function.environment.clone())),
-            );
+            let mut extended_env =
+                extend_function_env(function.parameters, arguments, function.environment);
 
-            let evaluated_body = eval(
-                Node::Statement(Statement::Block(function.body)),
-                &mut extended_env,
-            );
+            let evaluated_body = eval_block_statements(function.body.statements, &mut extended_env);
             // We need to unwrap the value inside the return object
             unwrap_return_value(evaluated_body)
         }
@@ -329,14 +314,15 @@ fn apply_function(function: Object, arguments: Vec<Object>) -> Object {
 
 // Extends the function environment with the arguments
 fn extend_function_env(
-    function: &Function,
+    parameters: Vec<Identifier>,
     arguments: Vec<Object>,
-    environment: Rc<RefCell<Environment>>,
+    environment: Environment,
 ) -> Environment {
     let mut extended_env = Environment::new_enclosed(environment);
 
-    for (i, parameter) in function.parameters.iter().enumerate() {
-        extended_env.set(&parameter.name, arguments[i].clone());
+    //
+    for (parameter, argument) in parameters.iter().zip(arguments) {
+        extended_env.set(&parameter.name, argument);
     }
 
     extended_env
@@ -352,71 +338,53 @@ fn unwrap_return_value(object: Object) -> Object {
 fn eval_statement(statement: Statement, environment: &mut Environment) -> Object {
     match statement {
         Statement::Expression(expression_statement) => {
-            return eval(
-                Node::Expression(expression_statement.expression),
-                environment,
-            )
+            return eval_expression(expression_statement.expression, environment)
         }
         Statement::Return(return_statement) => {
-            let return_value = eval(Node::Expression(return_statement.value), environment);
+            let return_value = eval_expression(return_statement.value, environment);
             Object::Return(Box::new(return_value))
         }
         Statement::Let(let_statement) => {
-            let value = eval(Node::Expression(let_statement.value), environment);
+            let value = eval_expression(let_statement.value, environment);
             if is_error(&value) {
                 return value;
             }
 
-            environment.set(&let_statement.identifier.name, value.clone());
+            environment.set(&let_statement.identifier.name, value);
 
-            value
+            NULL
         }
         Statement::While(while_statement) => eval_while_statement(while_statement, environment),
-        Statement::Block(block_statement) => {
-            eval_block_statements(block_statement.statements, environment)
-        }
     }
 }
 
 fn eval_while_statement(node: WhileStatement, environment: &mut Environment) -> Object {
-    let mut condition = eval(Node::Expression(node.condition.clone()), environment);
-    if let Object::Error(_) = condition {
-        return condition;
-    }
+    // Repeats until the condition is false
+    loop {
+        let condition = eval_expression(node.condition.clone(), environment);
+        if is_error(&condition) {
+            return condition;
+        }
 
-    if !matches!(condition, Object::Boolean(_)) {
-        return Object::Error(format!(
-            "type mismatch: expected BOOLEAN but found {}",
-            condition.object_type()
-        ));
-    }
+        if !is_truthy(&condition) {
+            return NULL;
+        }
 
-    while is_truthy(&condition) {
-        let result = eval(
-            Node::Statement(Statement::Block(node.body.clone())),
-            environment,
-        );
+        let result = eval_block_statements(node.body.statements.clone(), environment);
 
         match result {
             Object::Return(return_object) => return *return_object,
             Object::Error(_) => return result,
-            _ => {}
-        }
-
-        condition = eval(Node::Expression(node.condition.clone()), environment);
-        if let Object::Error(_) = condition {
-            return condition;
+            _ => continue,
         }
     }
-
-    return NULL;
 }
 
 fn eval_block_statements(statements: Vec<Statement>, environment: &mut Environment) -> Object {
     let mut result = NULL;
 
     for statement in statements {
-        result = eval(Node::Statement(statement), environment);
+        result = eval_statement(statement, environment);
         // When we find return or an error we stop evaluating
         match result {
             Object::Return(_) => return result,
