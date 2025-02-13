@@ -3,7 +3,6 @@ use crate::common::lexer::token::Token;
 pub enum Node {
     Program(Program),
     Expression(Expression),
-    Statement(Statement),
 }
 
 // Root node of the AST
@@ -378,7 +377,6 @@ pub enum Statement {
     Let(LetStatement),
     Return(ReturnStatement),
     Expression(ExpressionStatement),
-    Block(BlockStatement),
     While(WhileStatement),
 }
 
@@ -388,7 +386,6 @@ impl Statement {
             Statement::Let(statement) => statement.get_lexeme(),
             Statement::Return(statement) => statement.get_lexeme(),
             Statement::Expression(statement) => statement.get_lexeme(),
-            Statement::Block(statement) => statement.get_lexeme(),
             Statement::While(statement) => statement.get_lexeme(),
         }
     }
@@ -398,7 +395,6 @@ impl Statement {
             Statement::Let(statement) => statement.to_string(),
             Statement::Return(statement) => statement.to_string(),
             Statement::Expression(statement) => statement.to_string(),
-            Statement::Block(statement) => statement.to_string(),
             Statement::While(statement) => statement.to_string(),
         }
     }
@@ -494,14 +490,6 @@ pub struct BlockStatement {
 }
 
 impl BlockStatement {
-    pub fn get_lexeme(&self) -> String {
-        if self.statements.len() > 1 {
-            return self.statements[0].get_lexeme();
-        } else {
-            return "".to_string();
-        }
-    }
-
     pub fn to_string(&self) -> String {
         self.statements
             .iter()
