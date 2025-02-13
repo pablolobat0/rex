@@ -1,6 +1,4 @@
-use std::cell::RefCell;
 use std::collections::HashMap;
-use std::rc::Rc;
 
 use crate::interpreter::parser::ast::{BlockStatement, Identifier};
 
@@ -44,47 +42,6 @@ impl Object {
     }
 }
 
-// Store for identifier values
-#[derive(Debug, PartialEq, Clone)]
-pub struct Environment {
-    store: HashMap<String, Object>,
-    outer: Option<Rc<RefCell<Environment>>>, // Outer environment of the function
-}
-
-impl Environment {
-    pub fn new() -> Environment {
-        Environment {
-            store: HashMap::new(),
-            outer: None,
-        }
-    }
-
-    pub fn new_enclosed(outer: Rc<RefCell<Environment>>) -> Environment {
-        Environment {
-            store: HashMap::new(),
-            outer: Some(outer),
-        }
-    }
-
-    pub fn get(&self, key: &str) -> Option<Object> {
-        let object = self.store.get(key);
-
-        // If the object doesn't exist in the store we search in the outer
-        if !object.is_some() {
-            match &self.outer {
-                Some(outer) => return outer.as_ref().borrow().get(key),
-                None => return object.cloned(),
-            };
-        }
-
-        return object.cloned();
-    }
-
-    pub fn set(&mut self, key: &str, object: Object) {
-        self.store.insert(key.to_string(), object);
-    }
-}
-
 #[derive(Debug, PartialEq, Clone)]
 pub struct Function {
     pub parameters: Vec<Identifier>,
@@ -113,5 +70,47 @@ impl Function {
             .collect::<Vec<String>>()
             .join(", ");
         format!("fn ({}) {{\n {}", parameters_string, self.body.to_string())
+    }
+}
+
+// Store for identifier values
+#[derive(Debug, PartialEq, Clone)]
+pub struct Environment {
+    inner: HashMap<String, Object>,
+    outer: Option<Box<Environment>>, // Outer environment of the function
+}
+
+impl Environment {
+    pub fn new() -> Environment {
+        Environment {
+            inner: HashMap::new(),
+            outer: None,
+        }
+    }
+
+    // Creates a new environment with an outer
+    pub fn new_enclosed(outer: Environment) -> Environment {
+        Environment {
+            inner: HashMap::new(),
+            outer: Some(Box::new(outer)),
+        }
+    }
+
+    pub fn get(&self, key: &str) -> Option<Object> {
+        let object = self.inner.get(key);
+
+        // If the object doesn't exist in the inner we search in the outer
+        if !object.is_some() {
+            match &self.outer {
+                Some(outer) => return outer.get(key),
+                None => return None,
+            };
+        }
+
+        return object.cloned();
+    }
+
+    pub fn set(&mut self, key: &str, object: Object) {
+        self.inner.insert(key.to_string(), object);
     }
 }
