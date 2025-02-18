@@ -93,7 +93,7 @@ impl<'a> Lexer<'a> {
                 self.read_char();
                 if self.current_char == Some('/') {
                     self.read_one_line_comment();
-                    return self.next_token();
+                    self.next_token()
                 } else if self.current_char == Some('*') {
                     self.read_multiple_line_comment();
                     return self.next_token();
@@ -139,8 +139,8 @@ impl<'a> Lexer<'a> {
             Some('.') => {
                 let start_position = self.position;
                 self.read_char();
-                if self.current_char.unwrap().is_digit(10) {
-                    return self.read_float(start_position);
+                if self.current_char.unwrap().is_ascii_digit() {
+                    self.read_float(start_position)
                 } else {
                     Token::new(TokenType::Dot, ".".to_string(), self.line)
                 }
@@ -186,7 +186,7 @@ impl<'a> Lexer<'a> {
             Some(c) => {
                 if c.is_alphabetic() || c == '_' {
                     self.read_identifier_or_keyword()
-                } else if c.is_digit(10) {
+                } else if c.is_ascii_digit() {
                     self.read_number()
                 } else {
                     self.read_char();
@@ -252,7 +252,7 @@ impl<'a> Lexer<'a> {
             if c == '.' {
                 self.read_char();
                 return self.read_float(start_position);
-            } else if !c.is_digit(10) {
+            } else if !c.is_ascii_digit() {
                 break;
             }
             self.read_char();
@@ -265,7 +265,7 @@ impl<'a> Lexer<'a> {
 
     fn read_float(&mut self, start_position: usize) -> Token {
         while let Some(c) = self.current_char {
-            if !c.is_digit(10) {
+            if !c.is_ascii_digit() {
                 break;
             }
             self.read_char();

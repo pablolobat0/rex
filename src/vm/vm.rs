@@ -52,13 +52,11 @@ impl<'a> VirtualMachine<'a> {
             match instruction {
                 Some(instruction) => match instruction {
                     OpCode::Constant(index) => {
-                        if let Some(constant) =
-                            self.compiler.current_chunk.get_constant(*index).cloned()
-                        {
-                            self.stack.push(constant);
-                        } else {
+                        let Some(constant) =
+                            self.compiler.current_chunk.get_constant(*index).cloned() else {
                             return InterpretResult::RuntimeError;
-                        }
+                        };
+                        self.stack.push(constant);
                     }
                     OpCode::True => self.stack.push(Value::Boolean(true)),
                     OpCode::False => self.stack.push(Value::Boolean(false)),

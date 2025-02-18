@@ -116,6 +116,7 @@ impl Chunk {
         self.constants.push(constant);
         self.constants.len() - 1
     }
+
     pub fn get_constant(&mut self, index: usize) -> Option<&Value> {
         self.constants.get(index)
     }

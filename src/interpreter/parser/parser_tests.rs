@@ -171,7 +171,7 @@ mod tests {
     fn test_boolean_literals() {
         let input = ["false", "true"];
 
-        let expected_values = vec![false, true];
+        let expected_values = [false, true];
 
         for (i, value) in expected_values.iter().enumerate() {
             let lexer = Lexer::new(input[i]);

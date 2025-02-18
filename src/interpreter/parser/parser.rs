@@ -134,7 +134,7 @@ impl<'a> Parser<'a> {
         let error = format!(
             "{} {} with lexeme {}",
             message,
-            self.current_token_type(),
+            self.current_token_kind(),
             self.current_token
                 .as_ref()
                 .map(|t| t.lexeme.clone())
@@ -171,7 +171,7 @@ impl<'a> Parser<'a> {
         self.peek_token.as_ref().map(|t| t.kind) == Some(token)
     }
 
-    fn current_token_type(&self) -> TokenType {
+    fn current_token_kind(&self) -> TokenType {
         self.current_token
             .as_ref()
             .map(|t| t.kind)
@@ -314,7 +314,7 @@ impl<'a> Parser<'a> {
     // and infix_fn calling each other recursively using the current and peek
     // operator precedences
     fn parse_expression(&mut self, precedence: Precedence) -> Option<Expression> {
-        let Some(prefix_fn) =  self.prefix_parse_fns.get(&self.current_token_type()) else {
+        let Some(prefix_fn) =  self.prefix_parse_fns.get(&self.current_token_kind()) else {
                 self.current_error("No prefix parse function found for token: ");
                 return None;
         };
@@ -325,7 +325,7 @@ impl<'a> Parser<'a> {
 
         while !self.current_token_is(TokenType::NewLine) && precedence < self.peek_precedence() {
             self.next_token(); // skip token
-            let Some(infix_fn) = self.infix_parse_fns.get(&self.current_token_type()) else {
+            let Some(infix_fn) = self.infix_parse_fns.get(&self.current_token_kind()) else {
                     self.current_error("No infix parse function found for token: ");
                     return None;
             };

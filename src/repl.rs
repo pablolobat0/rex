@@ -44,7 +44,7 @@ pub fn start_ast() {
 
         let program = parser.parse_program();
 
-        if parser.errors.len() != 0 {
+        if !parser.errors.is_empty() {
             print_parser_errors(parser.errors);
             continue;
         }
@@ -89,9 +89,8 @@ pub fn start_vm() {
         if vm.interpret() == InterpretResult::Ok {
             // Update with current globals
             globals = vm.globals;
-            match vm.stack.last() {
-                Some(value) => print!("{}\n", value),
-                None => {}
+            if let Some(value) = vm.stack.last() {
+                println!("{}", value);
             }
         }
     }

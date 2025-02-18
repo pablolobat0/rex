@@ -1,10 +1,9 @@
 #[cfg(test)]
 mod test {
-
     use crate::{
         common::lexer::lexer::Lexer,
         vm::{
-            chunk::{Chunk, OpCode, Value},
+            chunk::{OpCode, Value},
             compiler::Compiler,
             vm::{InterpretResult, VirtualMachine},
         },

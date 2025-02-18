@@ -9,75 +9,17 @@ use crate::common::{
 };
 
 use super::chunk::{Chunk, OpCode, Value};
+use crate::vm::scope::Scope;
 
 // Function types for prefix and infix parsing
 type PrefixParseFn = fn(&mut Compiler);
 type InfixParseFn = fn(&mut Compiler);
 
 #[derive(Debug)]
-struct Local {
-    name: Token,
-    depth: i32,
-}
-
-#[derive(Debug)]
-struct Scope {
-    locals: Vec<Local>,
-    depth: i32,
-}
-
-impl Scope {
-    fn new() -> Scope {
-        Scope {
-            locals: vec![],
-            depth: 0,
-        }
-    }
-
-    fn begin_scope(&mut self) {
-        self.depth += 1;
-    }
-
-    fn end_scope(&mut self) -> u32 {
-        self.depth -= 1;
-
-        // Remove variables that are out of the current scope
-        let mut counter = 0;
-        self.locals.retain(|local| {
-            if local.depth > self.depth {
-                counter += 1;
-                false
-            } else {
-                true
-            }
-        });
-
-        counter
-    }
-
-    fn add_local(&mut self, name: Token) {
-        let local = Local {
-            name,
-            depth: -1, // Mark uninitialized
-        };
-        self.locals.push(local);
-    }
-
-    fn resolve_local(&self, name: &Token) -> Option<usize> {
-        // Check name and if it's initialized
-        self.locals
-            .iter()
-            .rev()
-            .position(|local| local.name.lexeme == *name.lexeme && local.depth > -1)
-            .map(|rev_index| self.locals.len() - 1 - rev_index)
-    }
-}
-
-#[derive(Debug)]
 pub struct Compiler<'a> {
     lexer: &'a mut Lexer<'a>,
-    current_token: Token,
-    peek_token: Token,
+    current_token: Option<Token>,
+    peek_token: Option<Token>,
     pub errors: Vec<String>,
     pub current_chunk: Chunk,
     prefix_parse_fns: HashMap<TokenType, PrefixParseFn>,
@@ -88,8 +30,8 @@ pub struct Compiler<'a> {
 
 impl<'a> Compiler<'a> {
     pub fn new(lexer: &'a mut Lexer<'a>) -> Compiler<'a> {
-        let current_token = lexer.next_token();
-        let peek_token = lexer.next_token();
+        let current_token = Some(lexer.next_token());
+        let peek_token = Some(lexer.next_token());
 
         let mut compiler = Compiler {
             lexer,
@@ -103,46 +45,59 @@ impl<'a> Compiler<'a> {
             current_scope: Scope::new(),
         };
 
-        // Prefix functions
-        compiler.register_prefix(TokenType::Identifier, identifier);
-        compiler.register_prefix(TokenType::Integer, number);
-        compiler.register_prefix(TokenType::Float, number);
-        compiler.register_prefix(TokenType::String, literal);
-        compiler.register_prefix(TokenType::True, literal);
-        compiler.register_prefix(TokenType::False, literal);
-        compiler.register_prefix(TokenType::Null, literal);
-        compiler.register_prefix(TokenType::Minus, prefix_expression);
-        compiler.register_prefix(TokenType::Bang, prefix_expression);
-        // Infix functions
-        compiler.register_infix(TokenType::Plus, infix_expression);
-        compiler.register_infix(TokenType::Minus, infix_expression);
-        compiler.register_infix(TokenType::Star, infix_expression);
-        compiler.register_infix(TokenType::Slash, infix_expression);
-        compiler.register_infix(TokenType::EqualEqual, infix_expression);
-        compiler.register_infix(TokenType::BangEqual, infix_expression);
-        compiler.register_infix(TokenType::Greater, infix_expression);
-        compiler.register_infix(TokenType::GreaterEqual, infix_expression);
-        compiler.register_infix(TokenType::Less, infix_expression);
-        compiler.register_infix(TokenType::LessEqual, infix_expression);
+        // Add compiler functions
+        compiler.register_prefix_functions();
+        compiler.register_infix_functions();
 
         compiler
     }
 
-    fn register_prefix(&mut self, token_type: TokenType, func: PrefixParseFn) {
-        self.prefix_parse_fns.insert(token_type, func);
+    fn register_prefix_functions(&mut self) {
+        self.prefix_parse_fns
+            .insert(TokenType::Identifier, identifier);
+        self.prefix_parse_fns.insert(TokenType::Integer, number);
+        self.prefix_parse_fns.insert(TokenType::Float, number);
+        self.prefix_parse_fns.insert(TokenType::String, literal);
+        self.prefix_parse_fns.insert(TokenType::True, literal);
+        self.prefix_parse_fns.insert(TokenType::False, literal);
+        self.prefix_parse_fns.insert(TokenType::Null, literal);
+        self.prefix_parse_fns
+            .insert(TokenType::Minus, prefix_expression);
+        self.prefix_parse_fns
+            .insert(TokenType::Bang, prefix_expression);
     }
 
-    fn register_infix(&mut self, token_type: TokenType, func: InfixParseFn) {
-        self.infix_parse_fns.insert(token_type, func);
+    fn register_infix_functions(&mut self) {
+        self.infix_parse_fns
+            .insert(TokenType::Plus, infix_expression);
+        self.infix_parse_fns
+            .insert(TokenType::Minus, infix_expression);
+        self.infix_parse_fns
+            .insert(TokenType::Star, infix_expression);
+        self.infix_parse_fns
+            .insert(TokenType::Slash, infix_expression);
+        self.infix_parse_fns
+            .insert(TokenType::EqualEqual, infix_expression);
+        self.infix_parse_fns
+            .insert(TokenType::BangEqual, infix_expression);
+        self.infix_parse_fns
+            .insert(TokenType::Greater, infix_expression);
+        self.infix_parse_fns
+            .insert(TokenType::GreaterEqual, infix_expression);
+        self.infix_parse_fns
+            .insert(TokenType::Less, infix_expression);
+        self.infix_parse_fns
+            .insert(TokenType::LessEqual, infix_expression);
     }
 
     // Consumes a token, updating current and peek token
     fn next_token(&mut self) {
-        self.current_token = std::mem::replace(&mut self.peek_token, self.lexer.next_token());
+        self.current_token = self.peek_token.take();
+        self.peek_token = Some(self.lexer.next_token());
     }
 
     fn expect_peek(&mut self, token: TokenType) -> bool {
-        if self.peek_token.kind == token {
+        if self.peek_token_is(token) {
             self.next_token(); // Consume token
             true
         } else {
@@ -152,19 +107,61 @@ impl<'a> Compiler<'a> {
     }
 
     fn current_token_is(&self, token: TokenType) -> bool {
-        return self.current_token.kind == token;
+        self.current_token.as_ref().map(|t| t.kind) == Some(token)
     }
 
     fn peek_token_is(&self, token: TokenType) -> bool {
-        return self.peek_token.kind == token;
+        self.peek_token.as_ref().map(|t| t.kind) == Some(token)
+    }
+
+    fn current_token_kind(&self) -> TokenType {
+        self.current_token
+            .as_ref()
+            .map(|t| t.kind)
+            .unwrap_or(TokenType::Error)
+    }
+
+    fn current_token_line(&self) -> u32 {
+        self.current_token.as_ref().map(|t| t.line).unwrap_or(0)
+    }
+
+    fn current_token_lexeme(&self) -> String {
+        self.current_token
+            .as_ref()
+            .map(|t| t.lexeme.clone())
+            .unwrap_or("".to_string())
     }
 
     fn peek_error(&mut self, expected_token: TokenType) {
         let message = format!(
             "Expected next token to be {}, got {} with lexeme {} instead",
-            expected_token, self.peek_token.kind, self.peek_token.lexeme
+            expected_token,
+            self.peek_token
+                .as_ref()
+                .map(|t| t.kind)
+                .unwrap_or(TokenType::Error),
+            self.peek_token
+                .as_ref()
+                .map(|t| t.lexeme.clone())
+                .unwrap_or("".to_string())
         );
-        self.add_error(message, self.peek_token.line);
+        self.add_error(
+            message,
+            self.peek_token.as_ref().map(|t| t.line).unwrap_or(0),
+        );
+    }
+
+    fn current_error(&mut self, message: &str) {
+        let error = format!(
+            "{} {} with lexeme {}",
+            message,
+            self.current_token_kind(),
+            self.current_token
+                .as_ref()
+                .map(|t| t.lexeme.clone())
+                .unwrap_or(String::new())
+        );
+        self.add_error(error, self.peek_token.as_ref().map(|t| t.line).unwrap_or(0));
     }
 
     fn add_error(&mut self, message: String, line: u32) {
@@ -172,7 +169,7 @@ impl<'a> Compiler<'a> {
     }
 
     pub fn compile(&mut self) -> bool {
-        while self.current_token.kind != TokenType::EOF {
+        while !self.current_token_is(TokenType::EOF) {
             self.statement();
             self.next_token();
         }
@@ -181,7 +178,7 @@ impl<'a> Compiler<'a> {
     }
 
     fn statement(&mut self) {
-        match self.current_token.kind {
+        match self.current_token_kind() {
             TokenType::Let => self.let_statement(),
             TokenType::LeftBrace => self.block(),
             TokenType::If => self.if_statement(),
@@ -196,12 +193,14 @@ impl<'a> Compiler<'a> {
             return;
         }
 
-        self.declare_variable();
+        if self.current_scope.depth != 0 {
+            self.declare_variable();
+        }
 
         let index = if self.current_scope.depth == 0 {
             Some(
                 self.current_chunk
-                    .add_constant(Value::String(self.current_token.lexeme.clone())),
+                    .add_constant(Value::String(self.current_token_lexeme())),
             )
         } else {
             None
@@ -230,23 +229,23 @@ impl<'a> Compiler<'a> {
     }
 
     fn declare_variable(&mut self) {
-        if self.current_scope.depth == 0 {
-            return;
-        }
-
         let has_existing_variable = self.current_scope.locals.iter().rev().any(|local| {
             local.depth == self.current_scope.depth
-                && local.name.lexeme == self.current_token.lexeme
+                && local.name.lexeme == self.current_token_lexeme()
         });
 
         if has_existing_variable {
             self.add_error(
                 "Already a variable with this name in this scope.".to_string(),
-                self.current_token.line,
+                self.current_token_line(),
             );
         }
 
-        self.current_scope.add_local(self.current_token.clone());
+        let Some(token) = self.current_token.take() else {
+            return;
+        };
+
+        self.current_scope.add_local(token);
     }
 
     fn block(&mut self) {
@@ -351,13 +350,7 @@ impl<'a> Compiler<'a> {
 
     fn parse_end_statement(&mut self) {
         if !self.peek_token_is(TokenType::NewLine) && !self.peek_token_is(TokenType::EOF) {
-            self.add_error(
-                format!(
-                    "Wrong expression end, expected new line or EOF, got: {}",
-                    self.peek_token.lexeme
-                ),
-                self.peek_token.line,
-            );
+            self.peek_error(TokenType::NewLine);
         } else {
             self.next_token();
         }
@@ -365,7 +358,7 @@ impl<'a> Compiler<'a> {
 
     pub fn emit_bytecode(&mut self, byte: OpCode) {
         self.current_chunk
-            .write(byte, self.current_token.line as usize);
+            .write(byte, self.current_token_line() as usize);
     }
     fn expression_statement(&mut self) {
         self.expression(Precedence::Lowest);
@@ -374,42 +367,45 @@ impl<'a> Compiler<'a> {
     }
 
     fn expression(&mut self, precedence: Precedence) {
-        let prefix_fn = self.prefix_parse_fns.get(&self.current_token.kind);
+        let Some(prefix_fn) = self.prefix_parse_fns.get(&self.current_token_kind()) else {
+            self.current_error("Unknow prefix operator ");
+            return;
+        };
 
-        match prefix_fn {
-            Some(function) => function(self),
-            None => self.add_error(
-                format!("Unknow prefix operator {}", self.current_token.lexeme),
-                self.current_token.line,
-            ),
-        }
+        prefix_fn(self);
 
         while precedence < self.peek_precedence() {
             // Consume token
             self.next_token();
-            let infix_fn = self.infix_parse_fns.get(&self.current_token.kind);
-            match infix_fn {
-                Some(function) => function(self),
-                None => self.add_error(
-                    format!("Unknow infix operator {}", self.current_token.lexeme),
-                    self.current_token.line,
-                ),
-            }
+            let Some(infix_fn) = self.infix_parse_fns.get(&self.current_token_kind()) else {
+                self.current_error("Unknow infix operator");
+                return;
+            };
+
+            infix_fn(self);
         }
     }
 
     fn current_precedence(&self) -> Precedence {
-        *self
-            .precedences
-            .get(&self.current_token.kind)
-            .unwrap_or(&Precedence::Lowest)
+        if let Some(token) = &self.current_token {
+            *self
+                .precedences
+                .get(&token.kind)
+                .unwrap_or(&Precedence::Lowest)
+        } else {
+            Precedence::Lowest
+        }
     }
 
     fn peek_precedence(&self) -> Precedence {
-        *self
-            .precedences
-            .get(&self.peek_token.kind)
-            .unwrap_or(&Precedence::Lowest)
+        if let Some(token) = &self.peek_token {
+            *self
+                .precedences
+                .get(&token.kind)
+                .unwrap_or(&Precedence::Lowest)
+        } else {
+            Precedence::Lowest
+        }
     }
 
     // Debug functions
@@ -420,7 +416,7 @@ impl<'a> Compiler<'a> {
     }
 
     fn one_statement(&mut self) {
-        match self.current_token.kind {
+        match self.current_token_kind() {
             TokenType::Let => self.let_statement(),
             TokenType::LeftBrace => self.block(),
             TokenType::If => self.if_statement(),
@@ -435,16 +431,17 @@ fn identifier(compiler: &mut Compiler) {
     let get_op;
     let set_op;
 
-    if let Some(position) = compiler
-        .current_scope
-        .resolve_local(&compiler.current_token)
-    {
+    let Some(token) = compiler.current_token.take() else {
+        return;
+    };
+
+    if let Some(position) = compiler.current_scope.resolve_local(&token) {
         get_op = OpCode::GetLocal(position);
         set_op = OpCode::SetLocal(position);
     } else {
         let index = compiler
             .current_chunk
-            .add_constant(Value::String(compiler.current_token.lexeme.clone()));
+            .add_constant(Value::String(token.lexeme));
         get_op = OpCode::GetGlobal(index);
         set_op = OpCode::SetGlobal(index);
     }
@@ -466,8 +463,7 @@ fn identifier(compiler: &mut Compiler) {
 fn number(compiler: &mut Compiler) {
     let value = Value::Number(
         compiler
-            .current_token
-            .lexeme
+            .current_token_lexeme()
             .parse()
             .expect("Not a valid number"),
     );
@@ -476,11 +472,11 @@ fn number(compiler: &mut Compiler) {
 }
 
 fn literal(compiler: &mut Compiler) {
-    match compiler.current_token.kind {
+    match compiler.current_token_kind() {
         TokenType::String => {
             let index = compiler
                 .current_chunk
-                .add_constant(Value::String(compiler.current_token.lexeme.clone()));
+                .add_constant(Value::String(compiler.current_token_lexeme()));
             compiler.emit_bytecode(OpCode::Constant(index));
         }
         TokenType::True => compiler.emit_bytecode(OpCode::True),
@@ -491,7 +487,7 @@ fn literal(compiler: &mut Compiler) {
 }
 
 fn prefix_expression(compiler: &mut Compiler) {
-    let operator = compiler.current_token.kind;
+    let operator = compiler.current_token_kind();
     // Consume current token
     compiler.next_token();
     compiler.expression(Precedence::Prefix);
@@ -499,17 +495,14 @@ fn prefix_expression(compiler: &mut Compiler) {
     match operator {
         TokenType::Minus => compiler.emit_bytecode(OpCode::Negate),
         TokenType::Bang => compiler.emit_bytecode(OpCode::Not),
-        _ => compiler.add_error(
-            format!("Unknow prefix operator {}", compiler.current_token.lexeme),
-            compiler.current_token.line,
-        ),
+        _ => compiler.current_error("Unknow prefix operator"),
     }
 }
 
 // Infix parsing functions
 
 fn infix_expression(compiler: &mut Compiler) {
-    let operator = compiler.current_token.kind;
+    let operator = compiler.current_token_kind();
     let precedence = compiler.current_precedence();
     // Consume current token
     compiler.next_token();
@@ -527,9 +520,6 @@ fn infix_expression(compiler: &mut Compiler) {
         TokenType::LessEqual => compiler.emit_bytecode(OpCode::LessEqual),
         TokenType::Greater => compiler.emit_bytecode(OpCode::Greater),
         TokenType::GreaterEqual => compiler.emit_bytecode(OpCode::GreaterEqual),
-        _ => compiler.add_error(
-            format!("Unknow prefix operator {}", compiler.current_token.lexeme),
-            compiler.current_token.line,
-        ),
+        _ => compiler.current_error("Unknow prefix operator"),
     }
 }

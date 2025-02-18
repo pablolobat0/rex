@@ -17,7 +17,7 @@ mod test {
 
         let mut environment = Environment::new();
 
-        return eval(Node::Program(program), &mut environment);
+        eval(Node::Program(program), &mut environment)
     }
 
     #[test]

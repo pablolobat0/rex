@@ -44,7 +44,7 @@ fn eval_expression(expression: Expression, environment: &mut Environment) -> Obj
                 return right;
             }
 
-            return eval_prefix_expression(&prefix_expression.operator, right);
+            eval_prefix_expression(&prefix_expression.operator, right)
         }
         Expression::Infix(infix_expression) => {
             let left_string = infix_expression.left.to_string();
@@ -57,11 +57,11 @@ fn eval_expression(expression: Expression, environment: &mut Environment) -> Obj
             // Check if it's an assignation
             if infix_expression.operator == "=".to_string() {
                 let Expression::Identifier(identifier) = *infix_expression.left else {
-                        return Object::Error(format!(
-                            "Expected Identifier found {} {}",
-                            left_string, right_string
-                        ));
-                    };
+                    return Object::Error(format!(
+                        "Expected Identifier found {} {}",
+                        left_string, right_string
+                    ));
+                };
 
                 let name = identifier.name.clone();
                 let object = eval_identifier(identifier, environment);
@@ -78,16 +78,16 @@ fn eval_expression(expression: Expression, environment: &mut Environment) -> Obj
                 return left;
             }
 
-            return eval_infix_expression(left, &infix_expression.operator, right);
+            eval_infix_expression(left, &infix_expression.operator, right)
         }
         Expression::If(if_expression) => eval_if_expression(if_expression, environment),
         Expression::Function(function_literal) => {
             // New environment for the function
-            return Object::Function(Function::new(
+            Object::Function(Function::new(
                 function_literal.parameters,
                 function_literal.body,
                 environment.clone(),
-            ));
+            ))
         }
         Expression::Call(call_expression) => {
             let function = eval_expression(*call_expression.function, environment);
@@ -197,7 +197,7 @@ fn eval_integer_infix_expression(left_value: i64, operator: &str, right_value: i
                     Object::Float(result)
                 }
             } else {
-                Object::Error(format!("error division by 0"))
+                Object::Error("error division by 0".to_string())
             }
         }
         "==" => eval_boolean(left_value == right_value),
@@ -219,7 +219,7 @@ fn eval_float_infix_expression(left_value: f64, operator: &str, right_value: f64
             if right_value != 0.0 {
                 Object::Float(left_value / right_value)
             } else {
-                Object::Error(format!("error division by 0"))
+                Object::Error("error division by 0".to_string())
             }
         }
         "==" => eval_boolean(left_value == right_value),
@@ -252,10 +252,10 @@ fn eval_string_infix_expression(left_value: String, operator: &str, right_value:
 fn eval_if_expression(node: IfExpression, environment: &mut Environment) -> Object {
     let condition = eval(Node::Expression(*node.condition), environment);
     let Object::Boolean(_) = condition else {
-            return Object::Error(format!(
-                "type mismatch, expected a BOOLEAN but found {}",
-                condition.object_type()
-            ))
+        return Object::Error(format!(
+            "type mismatch, expected a BOOLEAN but found {}",
+            condition.object_type()
+        ));
     };
 
     if is_truthy(&condition) {
@@ -303,12 +303,10 @@ fn apply_function(function: Object, arguments: Vec<Object>) -> Object {
             // We need to unwrap the value inside the return object
             unwrap_return_value(evaluated_body)
         }
-        _ => {
-            return Object::Error(format!(
-                "expected FUNCTION, found: {}",
-                function.object_type()
-            ))
-        }
+        _ => Object::Error(format!(
+            "expected FUNCTION, found: {}",
+            function.object_type()
+        )),
     }
 }
 
@@ -338,7 +336,7 @@ fn unwrap_return_value(object: Object) -> Object {
 fn eval_statement(statement: Statement, environment: &mut Environment) -> Object {
     match statement {
         Statement::Expression(expression_statement) => {
-            return eval_expression(expression_statement.expression, environment)
+            eval_expression(expression_statement.expression, environment)
         }
         Statement::Return(return_statement) => {
             let return_value = eval_expression(return_statement.value, environment);
@@ -397,8 +395,5 @@ fn eval_block_statements(statements: Vec<Statement>, environment: &mut Environme
 }
 
 fn is_error(object: &Object) -> bool {
-    match object {
-        Object::Error(_) => true,
-        _ => false,
-    }
+    matches!(object, Object::Error(_))
 }

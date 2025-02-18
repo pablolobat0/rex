@@ -115,8 +115,7 @@ impl Default for Token {
 
 impl Token {
     pub fn new(kind: TokenType, lexeme: String, line: u32) -> Token {
-        let token = Token { kind, lexeme, line };
-        token
+        Token { kind, lexeme, line }
     }
 }
 
