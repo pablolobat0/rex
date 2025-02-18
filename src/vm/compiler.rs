@@ -8,7 +8,10 @@ use crate::common::{
     precedences::{create_precedences, Precedence},
 };
 
-use super::chunk::{Chunk, OpCode, Value};
+use super::{
+    chunk::{Chunk, OpCode, Value},
+    vm_impl::InterpretResult,
+};
 use crate::vm::scope::Scope;
 
 // Function types for prefix and infix parsing
@@ -168,18 +171,23 @@ impl<'a> Compiler<'a> {
         self.errors.push(format!("Line {}: {}", line, message));
     }
 
-    pub fn compile(&mut self) -> bool {
+    pub fn compile(&mut self) -> InterpretResult {
         while !self.current_token_is(TokenType::EOF) {
             self.statement();
             self.next_token();
         }
         // Check compilation errors
-        self.errors.is_empty()
+        if self.errors.is_empty() {
+            InterpretResult::Ok
+        } else {
+            InterpretResult::CompileError
+        }
     }
 
     fn statement(&mut self) {
         match self.current_token_kind() {
             TokenType::Let => self.let_statement(),
+            TokenType::Return => self.return_statement(),
             TokenType::LeftBrace => self.block(),
             TokenType::If => self.if_statement(),
             TokenType::NewLine => (),
@@ -246,6 +254,15 @@ impl<'a> Compiler<'a> {
         };
 
         self.current_scope.add_local(token);
+    }
+
+    fn return_statement(&mut self) {
+        // Consume return
+        self.next_token();
+
+        self.expression(Precedence::Lowest);
+
+        self.emit_bytecode(OpCode::Return);
     }
 
     fn block(&mut self) {

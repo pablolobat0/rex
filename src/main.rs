@@ -43,7 +43,7 @@ fn main() {
         match interpreter_type {
             InterpreterType::VM => compile_and_run(code),
             InterpreterType::AST => interpret_ast(code),
-        }
+        };
     } else {
         match interpreter_type {
             InterpreterType::VM => start_vm(),

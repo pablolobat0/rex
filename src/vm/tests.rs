@@ -474,4 +474,24 @@ mod test {
 
         assert_eq!(vm.globals.get("a"), Some(&Value::Number(10.0)));
     }
+
+    #[test]
+    fn return_statement() {
+        let input = "return 1";
+
+        let mut lexer = Lexer::new(input);
+        let mut compiler = Compiler::new(&mut lexer);
+
+        compiler.compile();
+
+        check_compiler_errors(&compiler);
+
+        let mut vm = VirtualMachine::new(&mut compiler);
+
+        assert_eq!(
+            vm.interpret(),
+            InterpretResult::Ok,
+            "VM should run without errors"
+        );
+    }
 }
