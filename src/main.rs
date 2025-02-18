@@ -1,11 +1,11 @@
 use clap::{arg, command, ArgAction};
-use interpreter::interpreter::interpret_ast;
+use interpreter::interpreter_impl::interpret_ast;
 use repl::start_ast;
 use repl::start_vm;
 use std::env;
 use std::fs;
 use std::path::PathBuf;
-use vm::vm::compile_and_run;
+use vm::vm_impl::compile_and_run;
 
 mod common;
 mod interpreter;

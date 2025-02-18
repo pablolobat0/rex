@@ -1,4 +1,5 @@
 use crate::common::lexer::token::Token;
+use core::fmt::Display;
 
 pub enum Node {
     Program(Program),
@@ -11,6 +12,20 @@ pub struct Program {
     pub statements: Vec<Statement>,
 }
 
+impl Display for Program {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            self.statements
+                .iter()
+                .map(|statement| statement.to_string())
+                .collect::<Vec<String>>()
+                .join("\n")
+        )
+    }
+}
+
 impl Program {
     pub fn new() -> Program {
         Program { statements: vec![] }
@@ -21,20 +36,11 @@ impl Program {
     }
 
     pub fn get_lexeme(&self) -> String {
-        if self.statements.len() > 0 {
-            return self.statements[0].get_lexeme();
+        if !self.statements.is_empty() {
+            self.statements[0].get_lexeme()
         } else {
-            return "".to_string();
+            "".to_string()
         }
-    }
-
-    #[cfg(test)]
-    pub fn to_string(&self) -> String {
-        self.statements
-            .iter()
-            .map(|statement| statement.to_string())
-            .collect::<Vec<String>>()
-            .join("\n")
     }
 }
 
@@ -53,6 +59,25 @@ pub enum Expression {
     Call(CallExpression),
 }
 
+impl Display for Expression {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let expression_stm = match self {
+            Expression::Identifier(identifier) => identifier.to_string(),
+            Expression::Integer(integer) => integer.to_string(),
+            Expression::Float(float) => float.to_string(),
+            Expression::Boolean(boolean) => boolean.to_string(),
+            Expression::String(string) => string.to_string(),
+            Expression::Prefix(prefix_expression) => prefix_expression.to_string(),
+            Expression::Infix(infinx_expression) => infinx_expression.to_string(),
+            Expression::If(if_expression) => if_expression.to_string(),
+            Expression::Function(function_literal) => function_literal.to_string(),
+            Expression::Call(call_expression) => call_expression.to_string(),
+        };
+
+        write!(f, "{}", expression_stm)
+    }
+}
+
 impl Expression {
     #[cfg(test)]
     pub fn get_lexeme(&self) -> String {
@@ -69,27 +94,18 @@ impl Expression {
             Expression::Call(call_expression) => call_expression.get_lexeme(),
         }
     }
-
-    pub fn to_string(&self) -> String {
-        match self {
-            Expression::Identifier(identifier) => identifier.to_string(),
-            Expression::Integer(integer) => integer.to_string(),
-            Expression::Float(float) => float.to_string(),
-            Expression::Boolean(boolean) => boolean.to_string(),
-            Expression::String(string) => string.to_string(),
-            Expression::Prefix(prefix_expression) => prefix_expression.to_string(),
-            Expression::Infix(infinx_expression) => infinx_expression.to_string(),
-            Expression::If(if_expression) => if_expression.to_string(),
-            Expression::Function(function_literal) => function_literal.to_string(),
-            Expression::Call(call_expression) => call_expression.to_string(),
-        }
-    }
 }
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Identifier {
     pub token: Token,
     pub name: String,
+}
+
+impl Display for Identifier {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.name)
+    }
 }
 
 impl Identifier {
@@ -100,11 +116,7 @@ impl Identifier {
 
     #[cfg(test)]
     pub fn get_lexeme(&self) -> String {
-        return self.token.lexeme.clone();
-    }
-
-    pub fn to_string(&self) -> String {
-        self.name.clone()
+        self.token.lexeme.clone()
     }
 }
 
@@ -114,17 +126,43 @@ pub struct IntegerLiteral {
     pub value: i64,
 }
 
+impl Display for IntegerLiteral {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.token.lexeme)
+    }
+}
+
 impl IntegerLiteral {
     #[cfg(test)]
     pub fn get_lexeme(&self) -> String {
         self.token.lexeme.clone()
     }
 
-    pub fn to_string(&self) -> String {
-        self.token.lexeme.clone()
-    }
     pub fn new(token: Token, value: i64) -> IntegerLiteral {
         IntegerLiteral { token, value }
+    }
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct FloatLiteral {
+    token: Token,
+    pub value: f64,
+}
+
+impl Display for FloatLiteral {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.token.lexeme)
+    }
+}
+
+impl FloatLiteral {
+    #[cfg(test)]
+    pub fn get_lexeme(&self) -> String {
+        self.token.lexeme.clone()
+    }
+
+    pub fn new(token: Token, value: f64) -> FloatLiteral {
+        FloatLiteral { token, value }
     }
 }
 
@@ -134,23 +172,9 @@ pub struct BooleanLiteral {
     pub value: bool,
 }
 
-#[derive(Debug, PartialEq, Clone)]
-pub struct FloatLiteral {
-    token: Token,
-    pub value: f64,
-}
-
-impl FloatLiteral {
-    #[cfg(test)]
-    pub fn get_lexeme(&self) -> String {
-        self.token.lexeme.clone()
-    }
-
-    pub fn to_string(&self) -> String {
-        self.token.lexeme.clone()
-    }
-    pub fn new(token: Token, value: f64) -> FloatLiteral {
-        FloatLiteral { token, value }
+impl Display for BooleanLiteral {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.token.lexeme)
     }
 }
 
@@ -160,9 +184,6 @@ impl BooleanLiteral {
         self.token.lexeme.clone()
     }
 
-    pub fn to_string(&self) -> String {
-        self.token.lexeme.clone()
-    }
     pub fn new(token: Token, value: bool) -> BooleanLiteral {
         BooleanLiteral { token, value }
     }
@@ -174,6 +195,12 @@ pub struct StringLiteral {
     pub value: String,
 }
 
+impl Display for StringLiteral {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.token.lexeme)
+    }
+}
+
 impl StringLiteral {
     pub fn new(token: Token, value: String) -> StringLiteral {
         StringLiteral { token, value }
@@ -181,9 +208,6 @@ impl StringLiteral {
 
     #[cfg(test)]
     pub fn get_lexeme(&self) -> String {
-        self.token.lexeme.clone()
-    }
-    pub fn to_string(&self) -> String {
         self.token.lexeme.clone()
     }
 }
@@ -196,21 +220,24 @@ pub struct PrefixExpression {
     pub right: Box<Expression>,
 }
 
-impl PrefixExpression {
-    #[cfg(test)]
-    fn get_lexeme(&self) -> String {
-        self.token.lexeme.clone()
+impl Display for PrefixExpression {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "({}{})", self.operator, self.right)
     }
+}
 
-    fn to_string(&self) -> String {
-        format!("({}{})", self.operator, self.right.to_string())
-    }
+impl PrefixExpression {
     pub fn new(token: Token, operator: String, right: Expression) -> PrefixExpression {
         PrefixExpression {
             token,
             operator,
             right: Box::new(right),
         }
+    }
+
+    #[cfg(test)]
+    fn get_lexeme(&self) -> String {
+        self.token.lexeme.clone()
     }
 }
 
@@ -223,20 +250,18 @@ pub struct InfixExpression {
     pub right: Box<Expression>,
 }
 
+impl Display for InfixExpression {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "({} {} {})", self.left, self.operator, self.right)
+    }
+}
+
 impl InfixExpression {
     #[cfg(test)]
     pub fn get_lexeme(&self) -> String {
         self.token.lexeme.clone()
     }
 
-    pub fn to_string(&self) -> String {
-        format!(
-            "({} {} {})",
-            self.left.to_string(),
-            self.operator,
-            self.right.to_string()
-        )
-    }
     pub fn new(
         token: Token,
         left: Expression,
@@ -262,13 +287,8 @@ pub struct IfExpression {
     pub alternative: Option<BlockStatement>,
 }
 
-impl IfExpression {
-    #[cfg(test)]
-    pub fn get_lexeme(&self) -> String {
-        self.token.lexeme.clone()
-    }
-
-    pub fn to_string(&self) -> String {
+impl Display for IfExpression {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let condition_str = self.condition.to_string();
         let consequence_str = self.consequence.to_string();
         let alternative_str = match &self.alternative {
@@ -277,14 +297,23 @@ impl IfExpression {
         };
 
         if self.alternative.is_some() {
-            format!(
+            write!(
+                f,
                 "if {} {{\n{}\n}} else {{\n{}\n}}",
                 condition_str, consequence_str, alternative_str
             )
         } else {
-            format!("if {} {{\n{}\n}}", condition_str, consequence_str)
+            write!(f, "if {} {{\n{}\n}}", condition_str, consequence_str)
         }
     }
+}
+
+impl IfExpression {
+    #[cfg(test)]
+    pub fn get_lexeme(&self) -> String {
+        self.token.lexeme.clone()
+    }
+
     pub fn new(
         token: Token,
         condition: Expression,
@@ -308,13 +337,8 @@ pub struct FunctionLiteral {
     pub body: BlockStatement,
 }
 
-impl FunctionLiteral {
-    #[cfg(test)]
-    pub fn get_lexeme(&self) -> String {
-        self.token.lexeme.clone()
-    }
-
-    pub fn to_string(&self) -> String {
+impl Display for FunctionLiteral {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let arguments = self
             .parameters
             .iter()
@@ -322,13 +346,20 @@ impl FunctionLiteral {
             .collect::<Vec<String>>()
             .join(", ");
 
-        format!(
+        write!(
+            f,
             "{}({}) {{\n{}\n}}",
-            self.token.lexeme,
-            arguments,
-            self.body.to_string()
+            self.token.lexeme, arguments, self.body
         )
     }
+}
+
+impl FunctionLiteral {
+    #[cfg(test)]
+    pub fn get_lexeme(&self) -> String {
+        self.token.lexeme.clone()
+    }
+
     pub fn new(token: Token, arguments: Vec<Identifier>, body: BlockStatement) -> FunctionLiteral {
         FunctionLiteral {
             token,
@@ -346,13 +377,8 @@ pub struct CallExpression {
     pub arguments: Vec<Expression>,
 }
 
-impl CallExpression {
-    #[cfg(test)]
-    pub fn get_lexeme(&self) -> String {
-        self.token.lexeme.clone()
-    }
-
-    pub fn to_string(&self) -> String {
+impl Display for CallExpression {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let argumets = self
             .arguments
             .iter()
@@ -360,7 +386,14 @@ impl CallExpression {
             .collect::<Vec<String>>()
             .join(", ");
 
-        format!("{}({})", self.function.to_string(), argumets)
+        write!(f, "{}({})", self.function, argumets)
+    }
+}
+
+impl CallExpression {
+    #[cfg(test)]
+    pub fn get_lexeme(&self) -> String {
+        self.token.lexeme.clone()
     }
 
     pub fn new(token: Token, function: Expression, arguments: Vec<Expression>) -> CallExpression {
@@ -380,6 +413,19 @@ pub enum Statement {
     While(WhileStatement),
 }
 
+impl Display for Statement {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let statement_str = match self {
+            Statement::Let(statement) => statement.to_string(),
+            Statement::Return(statement) => statement.to_string(),
+            Statement::Expression(statement) => statement.to_string(),
+            Statement::While(statement) => statement.to_string(),
+        };
+
+        write!(f, "{}", statement_str)
+    }
+}
+
 impl Statement {
     pub fn get_lexeme(&self) -> String {
         match self {
@@ -387,15 +433,6 @@ impl Statement {
             Statement::Return(statement) => statement.get_lexeme(),
             Statement::Expression(statement) => statement.get_lexeme(),
             Statement::While(statement) => statement.get_lexeme(),
-        }
-    }
-
-    pub fn to_string(&self) -> String {
-        match self {
-            Statement::Let(statement) => statement.to_string(),
-            Statement::Return(statement) => statement.to_string(),
-            Statement::Expression(statement) => statement.to_string(),
-            Statement::While(statement) => statement.to_string(),
         }
     }
 }
@@ -406,6 +443,16 @@ pub struct LetStatement {
     pub token: Token,
     pub identifier: Identifier,
     pub value: Expression,
+}
+
+impl Display for LetStatement {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{} {} = {}",
+            self.token.lexeme, self.identifier, self.value
+        )
+    }
 }
 
 impl LetStatement {
@@ -420,15 +467,6 @@ impl LetStatement {
     pub fn get_lexeme(&self) -> String {
         self.token.lexeme.clone()
     }
-
-    pub fn to_string(&self) -> String {
-        format!(
-            "{} {} = {}",
-            self.token.lexeme,
-            self.identifier.to_string(),
-            self.value.to_string()
-        )
-    }
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -438,14 +476,17 @@ pub struct ReturnStatement {
     pub value: Expression,
 }
 
+impl Display for ReturnStatement {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{} {}", self.token.lexeme.clone(), self.value)
+    }
+}
+
 impl ReturnStatement {
     fn get_lexeme(&self) -> String {
         self.token.lexeme.clone()
     }
 
-    pub fn to_string(&self) -> String {
-        format!("{} {}", self.token.lexeme.clone(), self.value.to_string())
-    }
     pub fn new(token: Token, value: Expression) -> ReturnStatement {
         ReturnStatement { token, value }
     }
@@ -457,13 +498,9 @@ pub struct ExpressionStatement {
     pub expression: Expression,
 }
 
-impl ExpressionStatement {
-    pub fn get_lexeme(&self) -> String {
-        self.token.lexeme.clone()
-    }
-
-    pub fn to_string(&self) -> String {
-        match &self.expression {
+impl Display for ExpressionStatement {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let expression_str = match &self.expression {
             Expression::Identifier(identifier) => identifier.to_string(),
             Expression::Integer(integer) => integer.to_string(),
             Expression::Float(float) => float.to_string(),
@@ -474,7 +511,15 @@ impl ExpressionStatement {
             Expression::If(if_expression) => if_expression.to_string(),
             Expression::Function(function_literal) => function_literal.to_string(),
             Expression::Call(call_expression) => call_expression.to_string(),
-        }
+        };
+
+        write!(f, "{}", expression_str)
+    }
+}
+
+impl ExpressionStatement {
+    pub fn get_lexeme(&self) -> String {
+        self.token.lexeme.clone()
     }
 
     pub fn new(token: Token, expression: Expression) -> ExpressionStatement {
@@ -489,15 +534,21 @@ pub struct BlockStatement {
     pub statements: Vec<Statement>,
 }
 
-impl BlockStatement {
-    pub fn to_string(&self) -> String {
-        self.statements
-            .iter()
-            .map(|statement| statement.to_string())
-            .collect::<Vec<String>>()
-            .join("\n")
+impl Display for BlockStatement {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            self.statements
+                .iter()
+                .map(|statement| statement.to_string())
+                .collect::<Vec<String>>()
+                .join("\n")
+        )
     }
+}
 
+impl BlockStatement {
     pub fn new(token: Token) -> BlockStatement {
         BlockStatement {
             token,
@@ -517,6 +568,18 @@ pub struct WhileStatement {
     pub body: BlockStatement,
 }
 
+impl Display for WhileStatement {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{} {} {{\n{}\n}}",
+            self.get_lexeme(),
+            self.condition,
+            self.body
+        )
+    }
+}
+
 impl WhileStatement {
     pub fn new(token: Token, condition: Expression, body: BlockStatement) -> WhileStatement {
         WhileStatement {
@@ -528,13 +591,5 @@ impl WhileStatement {
 
     pub fn get_lexeme(&self) -> String {
         self.token.lexeme.clone()
-    }
-    pub fn to_string(&self) -> String {
-        format!(
-            "{} {} {{\n{}\n}}",
-            self.get_lexeme(),
-            self.condition.to_string(),
-            self.body.to_string()
-        )
     }
 }

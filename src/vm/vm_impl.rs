@@ -1,6 +1,6 @@
-use std::{collections::HashMap, usize};
+use std::collections::HashMap;
 
-use crate::common::lexer::lexer::Lexer;
+use crate::common::lexer::lexer_impl::Lexer;
 
 use super::{
     chunk::{value_equal, OpCode, Value},
@@ -63,7 +63,7 @@ impl<'a> VirtualMachine<'a> {
                     OpCode::Null => self.stack.push(Value::Null),
                     OpCode::Not => {
                         if let Some(value) = self.stack.last_mut() {
-                            *value = Value::Boolean(is_falsey(&value));
+                            *value = Value::Boolean(is_falsey(value));
                         } else {
                             return InterpretResult::RuntimeError;
                         }

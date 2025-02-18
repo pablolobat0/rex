@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::common::{
     lexer::{
-        lexer::Lexer,
+        lexer_impl::Lexer,
         token::{Token, TokenType},
     },
     precedences::{create_precedences, Precedence},
@@ -159,7 +159,7 @@ impl<'a> Compiler<'a> {
             self.current_token
                 .as_ref()
                 .map(|t| t.lexeme.clone())
-                .unwrap_or(String::new())
+                .unwrap_or_default()
         );
         self.add_error(error, self.peek_token.as_ref().map(|t| t.line).unwrap_or(0));
     }
@@ -174,7 +174,7 @@ impl<'a> Compiler<'a> {
             self.next_token();
         }
         // Check compilation errors
-        self.errors.len() == 0
+        self.errors.is_empty()
     }
 
     fn statement(&mut self) {
@@ -182,7 +182,7 @@ impl<'a> Compiler<'a> {
             TokenType::Let => self.let_statement(),
             TokenType::LeftBrace => self.block(),
             TokenType::If => self.if_statement(),
-            TokenType::NewLine => return,
+            TokenType::NewLine => (),
             TokenType::While => self.while_statement(),
             _ => self.expression_statement(),
         }
@@ -412,7 +412,7 @@ impl<'a> Compiler<'a> {
 
     pub fn compile_one_statement(&mut self) -> bool {
         self.one_statement();
-        self.errors.len() == 0
+        self.errors.is_empty()
     }
 
     fn one_statement(&mut self) {
@@ -482,7 +482,7 @@ fn literal(compiler: &mut Compiler) {
         TokenType::True => compiler.emit_bytecode(OpCode::True),
         TokenType::False => compiler.emit_bytecode(OpCode::False),
         TokenType::Null => compiler.emit_bytecode(OpCode::Null),
-        _ => return,
+        _ => (),
     }
 }
 

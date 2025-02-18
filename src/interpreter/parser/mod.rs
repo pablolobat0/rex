@@ -1,3 +1,5 @@
 pub mod ast;
-pub mod parser;
-pub mod parser_tests;
+pub mod parser_impl;
+
+#[cfg(test)]
+mod tests;

@@ -51,17 +51,11 @@ impl fmt::Display for Value {
 
 impl Value {
     pub fn is_number(&self) -> bool {
-        match self {
-            Value::Number(_) => true,
-            _ => false,
-        }
+        matches!(self, Value::Number(_))
     }
 
     pub fn is_boolean(&self) -> bool {
-        match self {
-            Value::Boolean(_) => true,
-            _ => false,
-        }
+        matches!(self, Value::Boolean(_))
     }
 }
 

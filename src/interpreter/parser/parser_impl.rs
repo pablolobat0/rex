@@ -1,6 +1,6 @@
 use crate::common::{
     lexer::{
-        lexer::Lexer,
+        lexer_impl::Lexer,
         token::{Token, TokenType},
     },
     precedences::{create_precedences, Precedence},
@@ -138,7 +138,7 @@ impl<'a> Parser<'a> {
             self.current_token
                 .as_ref()
                 .map(|t| t.lexeme.clone())
-                .unwrap_or(String::new())
+                .unwrap_or_default()
         );
         self.add_error(error, self.peek_token.as_ref().map(|t| t.line).unwrap_or(0));
     }
@@ -249,11 +249,9 @@ impl<'a> Parser<'a> {
             return None;
         };
 
-        let Some(token) = self.current_token.take() else {
-            return None;
-        };
+        let token = self.current_token.take();
 
-        let identifier = Identifier::new(token);
+        let identifier = Identifier::new(token?);
         if !self.expect_peek(TokenType::Equal) {
             return None;
         }
@@ -261,9 +259,7 @@ impl<'a> Parser<'a> {
         self.next_token();
 
         // Parse right expression
-        let Some(value) = self.parse_expression(Precedence::Lowest) else {
-            return None;
-        };
+        let value = self.parse_expression(Precedence::Lowest)?;
 
         Some(Statement::Let(LetStatement::new(
             let_token?, identifier, value,
@@ -276,9 +272,7 @@ impl<'a> Parser<'a> {
         // Consume return
         self.next_token();
 
-        let Some(value) = self.parse_expression(Precedence::Lowest) else {
-            return None;
-        };
+        let value = self.parse_expression(Precedence::Lowest)?;
 
         Some(Statement::Return(ReturnStatement::new(token?, value)))
     }
@@ -303,9 +297,7 @@ impl<'a> Parser<'a> {
 
     fn parse_expression_statement(&mut self) -> Option<ExpressionStatement> {
         let token = self.current_token.clone().unwrap_or(ERROR);
-        let Some(expression) = self.parse_expression(Precedence::Lowest) else {
-            return None;
-        };
+        let expression = self.parse_expression(Precedence::Lowest)?;
 
         Some(ExpressionStatement::new(token, expression))
     }
@@ -319,9 +311,7 @@ impl<'a> Parser<'a> {
                 return None;
         };
 
-        let Some(mut left_exp) = prefix_fn(self) else {
-                return None;
-        };
+        let mut left_exp = prefix_fn(self)?;
 
         while !self.current_token_is(TokenType::NewLine) && precedence < self.peek_precedence() {
             self.next_token(); // skip token
@@ -356,16 +346,12 @@ impl<'a> Parser<'a> {
 
 // Prefix functions
 fn parse_identifier(parser: &mut Parser<'_>) -> Option<Expression> {
-    if let Some(token) = parser.current_token.take() {
-        Some(Expression::Identifier(Identifier::new(token)))
-    } else {
-        None
-    }
+    parser.current_token.take().map(|token| Expression::Identifier(Identifier::new(token)))
 }
 
 fn parse_integer_literal(parser: &mut Parser<'_>) -> Option<Expression> {
     let Ok(value) =  parser.current_token.as_ref().
-        map(|t| t.lexeme.clone()) .unwrap_or(String::new()) 
+        map(|t| t.lexeme.clone()) .unwrap_or_default() 
         .parse::<i64>() else {
             parser.current_error("Could not parse as integer: ");
             return None;
@@ -379,7 +365,7 @@ fn parse_integer_literal(parser: &mut Parser<'_>) -> Option<Expression> {
 
 fn parse_float_literal(parser: &mut Parser<'_>) -> Option<Expression> {
     let Ok(value) = parser.current_token.as_ref()
-        .map(|t| t.lexeme.clone()).unwrap_or(String::new())
+        .map(|t| t.lexeme.clone()).unwrap_or_default()
         .parse::<f64>() else {
             parser.current_error("Could not parse as float: ");
             return None;
@@ -462,12 +448,12 @@ fn parse_if_expression(parser: &mut Parser<'_>) -> Option<Expression> {
         alternative = Some(parser.parse_block_statement());
     }
 
-    return Some(Expression::If(IfExpression::new(
+    Some(Expression::If(IfExpression::new(
         token?,
         condition?,
         consequence,
         alternative,
-    )));
+    )))
 }
 
 // <function_literal> ::= fn (<parameters>?) <block_statement>
@@ -478,9 +464,7 @@ fn parse_function_literal(parser: &mut Parser<'_>) -> Option<Expression> {
         return None;
     }
 
-    let Some(parameters) = parse_parameters(parser) else {
-        return None;
-    };
+    let parameters = parse_parameters(parser)?;
 
     if !parser.expect_peek(TokenType::LeftBrace) {
         return None;
@@ -488,9 +472,9 @@ fn parse_function_literal(parser: &mut Parser<'_>) -> Option<Expression> {
 
     let body = parser.parse_block_statement();
 
-    return Some(Expression::Function(FunctionLiteral::new(
+    Some(Expression::Function(FunctionLiteral::new(
         token?, parameters, body,
-    )));
+    )))
 }
 
 // <parameters> ::= <identifier> (, <identifier>)*
@@ -502,9 +486,7 @@ fn parse_parameters(parser: &mut Parser<'_>) -> Option<Vec<Identifier>> {
         return Some(arguments);
     }
 
-    if parser.current_token.is_none() {
-        return None;
-    }
+    parser.current_token.as_ref()?;
 
     parser.next_token();
 
@@ -529,7 +511,7 @@ fn parse_parameters(parser: &mut Parser<'_>) -> Option<Vec<Identifier>> {
         return None;
     }
 
-    return Some(arguments);
+    Some(arguments)
 }
 
 //Infix functions
@@ -559,15 +541,13 @@ fn parse_grouped_expression(parser: &mut Parser<'_>) -> Option<Expression> {
         return None;
     }
 
-    return expression;
+    expression
 }
 
 // <call_expression> ::= <expression> ( <arguments>? )
 fn parse_call_expression(parser: &mut Parser<'_>, left: Expression) -> Option<Expression> {
     let token = parser.current_token.take();
-    let Some(arguments)=parse_arguments(parser) else {
-         return None;
-    };
+    let arguments = parse_arguments(parser)?; 
     Some(Expression::Call(CallExpression::new( token?, left, arguments)))
 }
 
@@ -580,9 +560,7 @@ fn parse_arguments(parser: &mut Parser<'_>) -> Option<Vec<Expression>> {
     }
     parser.next_token();
 
-    let Some(argument) = parser.parse_expression(Precedence::Lowest) else {
-        return None;
-    };
+    let argument = parser.parse_expression(Precedence::Lowest)?;
     arguments.push(argument);
 
     while parser.peek_token_is(TokenType::Comma) {
@@ -595,9 +573,8 @@ fn parse_arguments(parser: &mut Parser<'_>) -> Option<Vec<Expression>> {
             parser.next_token();
         }
 
-        let Some(argument) = parser.parse_expression(Precedence::Lowest) else {
-            return None;
-        };
+        let argument = parser.parse_expression(Precedence::Lowest)?; 
+
         arguments.push(argument);
     }
 
@@ -605,5 +582,5 @@ fn parse_arguments(parser: &mut Parser<'_>) -> Option<Vec<Expression>> {
         return None;
     }
 
-    return Some(arguments);
+    Some(arguments)
 }

@@ -1,9 +1,9 @@
 use crate::{
-    common::lexer::lexer::Lexer,
-    interpreter::{evaluator::evaluator::eval, parser::ast::Node},
+    common::lexer::lexer_impl::Lexer,
+    interpreter::{evaluator::evaluator_impl::eval, parser::ast::Node},
 };
 
-use super::{evaluator::object::Environment, parser::parser::Parser};
+use super::{evaluator::object::Environment, parser::parser_impl::Parser};
 
 pub fn interpret_ast(input: String) {
     let mut environment = Environment::new();
@@ -18,10 +18,7 @@ pub fn interpret_ast(input: String) {
             continue;
         }
 
-        println!(
-            "{}",
-            eval(Node::Program(program), &mut environment).to_string()
-        );
+        println!("{}", eval(Node::Program(program), &mut environment));
     }
 }
 

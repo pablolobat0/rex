@@ -1,11 +1,11 @@
 #[cfg(test)]
 mod test {
     use crate::{
-        common::lexer::lexer::Lexer,
+        common::lexer::lexer_impl::Lexer,
         vm::{
             chunk::{OpCode, Value},
             compiler::Compiler,
-            vm::{InterpretResult, VirtualMachine},
+            vm_impl::{InterpretResult, VirtualMachine},
         },
     };
 
@@ -37,7 +37,7 @@ mod test {
             "VM should run without errors"
         );
 
-        assert_eq!(vm.stack.get(0), Some(&Value::Number(result)));
+        assert_eq!(vm.stack.first(), Some(&Value::Number(result)));
     }
 
     fn test_bool(input: &str, result: bool) {
@@ -56,7 +56,7 @@ mod test {
             "VM should run without errors"
         );
 
-        assert_eq!(vm.stack.get(0), Some(&Value::Boolean(result)));
+        assert_eq!(vm.stack.first(), Some(&Value::Boolean(result)));
     }
 
     fn test_string(input: &str, result: String) {
@@ -76,16 +76,16 @@ mod test {
         );
         println!("{}", input);
 
-        assert_eq!(vm.stack.get(0), Some(&Value::String(result)));
+        assert_eq!(vm.stack.first(), Some(&Value::String(result)));
     }
 
     #[test]
-    fn test_constant() {
+    fn constant() {
         test_number("1", 1.0);
     }
 
     #[test]
-    fn test_boolean() {
+    fn boolean() {
         let tests = [("true", true), ("false", false)];
 
         for (input, result) in tests {
@@ -94,7 +94,7 @@ mod test {
     }
 
     #[test]
-    fn test_null() {
+    fn null() {
         let mut lexer = Lexer::new("null");
         let mut compiler = Compiler::new(&mut lexer);
 
@@ -111,36 +111,36 @@ mod test {
             "VM should run without errors"
         );
 
-        assert_eq!(vm.stack.get(0), Some(&Value::Null));
+        assert_eq!(vm.stack.first(), Some(&Value::Null));
     }
 
     #[test]
-    fn test_negate() {
+    fn negate() {
         test_number("-1.2", -1.2);
     }
 
     #[test]
-    fn test_add() {
+    fn add() {
         test_number("10+5", 15.0);
     }
 
     #[test]
-    fn test_subtract() {
+    fn subtract() {
         test_number("10-5", 5.0);
     }
 
     #[test]
-    fn test_multiply() {
+    fn multiply() {
         test_number("10*5", 50.0);
     }
 
     #[test]
-    fn test_divide() {
+    fn divide() {
         test_number("10/5", 2.0);
     }
 
     #[test]
-    fn test_division_by_zero() {
+    fn division_by_zero() {
         let input = "10 / 0";
         let mut lexer = Lexer::new(input);
         let mut compiler = Compiler::new(&mut lexer);
@@ -159,7 +159,7 @@ mod test {
     }
 
     #[test]
-    fn test_not() {
+    fn not() {
         let tests = [
             ("!true", false),
             ("!false", true),
@@ -173,7 +173,7 @@ mod test {
     }
 
     #[test]
-    fn test_boolean_infix() {
+    fn boolean_infix() {
         let tests = [
             ("true == true", true),
             ("false == true", false),
@@ -203,17 +203,17 @@ mod test {
     }
 
     #[test]
-    fn test_string_literal() {
+    fn string_literal() {
         test_string("\"hola\"", "hola".to_string());
     }
 
     #[test]
-    fn test_string_concatenation() {
+    fn string_concatenation() {
         test_string("\"hola\" + \" mundo\"", "hola mundo".to_string());
     }
 
     #[test]
-    fn test_define_global() {
+    fn define_global() {
         let input = "let a = 1";
 
         let mut lexer = Lexer::new(input);
@@ -235,7 +235,7 @@ mod test {
     }
 
     #[test]
-    fn test_get_global() {
+    fn get_global() {
         let input = "let a = 1\nlet b = a + 3";
 
         let mut lexer = Lexer::new(input);
@@ -257,7 +257,7 @@ mod test {
     }
 
     #[test]
-    fn test_set_global() {
+    fn set_global() {
         let input = "let a = 1\na = 3";
 
         let mut lexer = Lexer::new(input);
@@ -279,7 +279,7 @@ mod test {
     }
 
     #[test]
-    fn test_define_local() {
+    fn define_local() {
         let input = "{
                     let a = 14
                    }";
@@ -296,7 +296,7 @@ mod test {
         );
 
         assert_eq!(
-            compiler.current_chunk.constants.get(0),
+            compiler.current_chunk.constants.first(),
             Some(&Value::Number(14.0))
         );
 
@@ -312,7 +312,7 @@ mod test {
     }
 
     #[test]
-    fn test_get_local() {
+    fn get_local() {
         let input = "{ 
                     let a = 14
                     let b = a
@@ -347,7 +347,7 @@ mod test {
         );
     }
     #[test]
-    fn test_set_local() {
+    fn set_local() {
         let input = "{ 
                     let a = 14
                     let b = a
@@ -384,7 +384,7 @@ mod test {
     }
 
     #[test]
-    fn test_if_true() {
+    fn if_true() {
         let tests = vec![
             // Caso 1: if true
             (
@@ -449,7 +449,7 @@ mod test {
     }
 
     #[test]
-    fn test_while_statement() {
+    fn while_statement() {
         let input = " 
                     let a = 1
                     while a != 10 {

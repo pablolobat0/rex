@@ -55,7 +55,7 @@ fn eval_expression(expression: Expression, environment: &mut Environment) -> Obj
             }
 
             // Check if it's an assignation
-            if infix_expression.operator == "=".to_string() {
+            if &infix_expression.operator == "=" {
                 let Expression::Identifier(identifier) = *infix_expression.left else {
                     return Object::Error(format!(
                         "Expected Identifier found {} {}",

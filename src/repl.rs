@@ -1,12 +1,12 @@
 use crate::{
-    common::lexer::lexer::Lexer,
+    common::lexer::lexer_impl::Lexer,
     interpreter::{
-        evaluator::{evaluator::eval, object::Environment},
-        parser::{ast::Node, parser::Parser},
+        evaluator::{evaluator_impl::eval, object::Environment},
+        parser::{ast::Node, parser_impl::Parser},
     },
     vm::{
         compiler::Compiler,
-        vm::{InterpretResult, VirtualMachine},
+        vm_impl::{InterpretResult, VirtualMachine},
     },
 };
 use std::io::{self, Write};
@@ -53,10 +53,7 @@ pub fn start_ast() {
             return;
         }
 
-        println!(
-            "{}",
-            eval(Node::Program(program), &mut environment).to_string()
-        );
+        println!("{}", eval(Node::Program(program), &mut environment));
     }
 }
 

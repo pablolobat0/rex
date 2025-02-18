@@ -1,3 +1,5 @@
-pub mod evaluator;
-pub mod evaluator_tests;
+pub mod evaluator_impl;
 pub mod object;
+
+#[cfg(test)]
+pub mod tests;

@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt::Display};
 
 use crate::interpreter::parser::ast::{BlockStatement, Identifier};
 
@@ -14,9 +14,9 @@ pub enum Object {
     Null,
 }
 
-impl Object {
-    pub fn to_string(&self) -> String {
-        match self {
+impl Display for Object {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let object_str = match self {
             Object::Integer(integer) => integer.to_string(),
             Object::Float(float) => float.to_string(),
             Object::Boolean(boolean) => boolean.to_string(),
@@ -25,9 +25,13 @@ impl Object {
             Object::Function(function) => function.to_string(),
             Object::Error(error_message) => error_message.to_string(),
             Object::Null => "null".to_string(),
-        }
-    }
+        };
 
+        write!(f, "{}", object_str)
+    }
+}
+
+impl Object {
     pub fn object_type(&self) -> String {
         match self {
             Object::Integer(_) => "INTEGER".to_string(),
@@ -49,6 +53,19 @@ pub struct Function {
     pub environment: Environment,
 }
 
+impl Display for Function {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let parameters_string = self
+            .parameters
+            .iter()
+            .map(|parameter| parameter.to_string())
+            .collect::<Vec<String>>()
+            .join(", ");
+
+        write!(f, "fn ({}) {{\n {}", parameters_string, self.body)
+    }
+}
+
 impl Function {
     pub fn new(
         parameters: Vec<Identifier>,
@@ -60,16 +77,6 @@ impl Function {
             body,
             environment,
         }
-    }
-
-    pub fn to_string(&self) -> String {
-        let parameters_string = self
-            .parameters
-            .iter()
-            .map(|parameter| parameter.to_string())
-            .collect::<Vec<String>>()
-            .join(", ");
-        format!("fn ({}) {{\n {}", parameters_string, self.body.to_string())
     }
 }
 
@@ -100,14 +107,14 @@ impl Environment {
         let object = self.inner.get(key);
 
         // If the object doesn't exist in the inner we search in the outer
-        if !object.is_some() {
+        if object.is_none() {
             match &self.outer {
                 Some(outer) => return outer.get(key),
                 None => return None,
             };
         }
 
-        return object.cloned();
+        object.cloned()
     }
 
     pub fn set(&mut self, key: &str, object: Object) {
