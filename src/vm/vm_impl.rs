@@ -5,6 +5,7 @@ use crate::common::lexer::lexer_impl::Lexer;
 use super::{
     chunk::{value_equal, OpCode, Value},
     compiler::Compiler,
+    object::FunctionType,
 };
 
 #[derive(Debug)]
@@ -47,20 +48,18 @@ impl<'a> VirtualMachine<'a> {
     pub fn interpret(&mut self) -> InterpretResult {
         loop {
             // Gets next OpCode using current PC
-            let Some(instruction) = self.compiler.current_chunk.get(self.pc) else {
+            let pc = self.pc;
+            let chunk = self.compiler.current_chunk();
+            let Some(instruction) = chunk.get(pc) else {
                 return InterpretResult::Ok;
             };
+
             self.pc += 1; // Increases current PC for next instruction
             match instruction {
-                OpCode::Return => {
-                    println!("{}", self.stack.pop().unwrap_or(Value::Null));
-                    return InterpretResult::Ok;
-                }
                 OpCode::Constant(index) => {
-                    let Some(constant) =
-                            self.compiler.current_chunk.get_constant(*index).cloned() else {
-                            return InterpretResult::RuntimeError;
-                        };
+                    let Some(constant) = chunk.get_constant(*index).cloned() else {
+                        return InterpretResult::RuntimeError;
+                    };
                     self.stack.push(constant);
                 }
                 OpCode::True => self.stack.push(Value::Boolean(true)),
@@ -150,10 +149,7 @@ impl<'a> VirtualMachine<'a> {
                     self.stack.pop();
                 }
                 OpCode::DefineGlobal(index) => {
-                    match (
-                        self.compiler.current_chunk.get_constant(*index),
-                        self.stack.last(),
-                    ) {
+                    match (chunk.get_constant(*index), self.stack.last()) {
                         (Some(Value::String(name)), Some(last)) => {
                             self.globals.insert(name.clone(), last.clone());
                         }
@@ -161,38 +157,39 @@ impl<'a> VirtualMachine<'a> {
                     }
                 }
                 OpCode::GetGlobal(index) => {
-                    if let Some(Value::String(name)) =
-                        self.compiler.current_chunk.get_constant(*index)
-                    {
-                        match self.globals.get(name) {
-                            Some(value) => self.stack.push(value.clone()),
-                            None => return InterpretResult::RuntimeError,
-                        };
-                    } else {
+                    let Some(Value::String(name)) = chunk.get_constant(*index) else {
                         return InterpretResult::RuntimeError;
-                    }
+                    };
+
+                    match self.globals.get(name) {
+                        Some(value) => self.stack.push(value.clone()),
+                        None => return InterpretResult::RuntimeError,
+                    };
                 }
                 OpCode::SetGlobal(index) => {
-                    if let Some(Value::String(name)) =
-                        self.compiler.current_chunk.get_constant(*index)
-                    {
-                        match self.stack.pop() {
-                            Some(value) => self.globals.insert(name.to_string(), value),
-                            None => return InterpretResult::RuntimeError,
-                        };
-                    } else {
+                    let Some(Value::String(name)) = chunk.get_constant(*index) else {
                         return InterpretResult::RuntimeError;
-                    }
+                    };
+
+                    match self.stack.pop() {
+                        Some(value) => self.globals.insert(name.to_string(), value),
+                        None => return InterpretResult::RuntimeError,
+                    };
                 }
                 OpCode::GetLocal(index) => {
-                    self.stack.push(self.stack[*index].clone());
+                    // -1 because first locals slot is for vm
+                    let Some(value) = self.stack.get(*index - 1) else {
+                        return InterpretResult::RuntimeError;
+                    };
+                    self.stack.push(value.clone());
                 }
                 OpCode::SetLocal(index) => {
                     self.stack[*index] = self.stack[self.stack.len() - 1].clone();
-                    println!("{}", self.stack[*index]);
                 }
                 OpCode::JumpIfFalse(target) => {
-                    if is_falsey(self.peek(0)) {
+                    let last_index = self.stack.len() - 1;
+
+                    if is_falsey(&self.stack[last_index]) {
                         self.pc += target;
                     }
                 }
@@ -202,14 +199,12 @@ impl<'a> VirtualMachine<'a> {
                 OpCode::Loop(target) => {
                     self.pc -= *target;
                 }
-                OpCode::Return => return InterpretResult::Ok,
+                OpCode::Return => {
+                    println!("{}", self.stack.pop().unwrap_or(Value::Null));
+                    return InterpretResult::Ok;
+                }
             }
         }
-    }
-
-    fn peek(&self, distance: usize) -> &Value {
-        let last_index = self.stack.len() - 1;
-        &self.stack[last_index - distance]
     }
 }
 
@@ -223,7 +218,7 @@ fn is_falsey(value: &Value) -> bool {
 
 pub fn compile_and_run(input: String) {
     let mut lexer = Lexer::new(&input);
-    let mut compiler = Compiler::new(&mut lexer);
+    let mut compiler = Compiler::new(&mut lexer, FunctionType::Script);
 
     if matches!(compiler.compile(), InterpretResult::CompileError) {
         println!("compiler has {} errors", compiler.errors.len());

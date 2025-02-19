@@ -10,6 +10,7 @@ use crate::common::{
 
 use super::{
     chunk::{Chunk, OpCode, Value},
+    object::{Function, FunctionType},
     vm_impl::InterpretResult,
 };
 use crate::vm::scope::Scope;
@@ -24,15 +25,16 @@ pub struct Compiler<'a> {
     current_token: Option<Token>,
     peek_token: Option<Token>,
     pub errors: Vec<String>,
-    pub current_chunk: Chunk,
     prefix_parse_fns: HashMap<TokenType, PrefixParseFn>,
     infix_parse_fns: HashMap<TokenType, InfixParseFn>,
     precedences: HashMap<TokenType, Precedence>,
     current_scope: Scope,
+    function_type: FunctionType,
+    function: Function,
 }
 
 impl<'a> Compiler<'a> {
-    pub fn new(lexer: &'a mut Lexer<'a>) -> Compiler<'a> {
+    pub fn new(lexer: &'a mut Lexer<'a>, function_type: FunctionType) -> Compiler<'a> {
         let current_token = Some(lexer.next_token());
         let peek_token = Some(lexer.next_token());
 
@@ -41,14 +43,21 @@ impl<'a> Compiler<'a> {
             current_token,
             peek_token,
             errors: vec![],
-            current_chunk: Chunk::new(),
             prefix_parse_fns: HashMap::new(),
             infix_parse_fns: HashMap::new(),
             precedences: create_precedences(),
             current_scope: Scope::new(),
+            function_type,
+            function: Function::new(),
         };
 
-        // Add compiler functions
+        // Reserve first local for vm use
+        compiler.current_scope.add_local(Token {
+            kind: TokenType::Default,
+            lexeme: String::new(),
+            line: 0,
+        });
+
         compiler.register_prefix_functions();
         compiler.register_infix_functions();
 
@@ -171,11 +180,22 @@ impl<'a> Compiler<'a> {
         self.errors.push(format!("Line {}: {}", line, message));
     }
 
+    pub fn current_chunk(&mut self) -> &mut Chunk {
+        &mut self.function.chunk
+    }
+
     pub fn compile(&mut self) -> InterpretResult {
         while !self.current_token_is(TokenType::EOF) {
             self.statement();
             self.next_token();
         }
+
+        self.end_compiler()
+    }
+
+    fn end_compiler(&mut self) -> InterpretResult {
+        self.emit_return();
+
         // Check compilation errors
         if self.errors.is_empty() {
             InterpretResult::Ok
@@ -206,10 +226,8 @@ impl<'a> Compiler<'a> {
         }
 
         let index = if self.current_scope.depth == 0 {
-            Some(
-                self.current_chunk
-                    .add_constant(Value::String(self.current_token_lexeme())),
-            )
+            let lexeme = self.current_token_lexeme();
+            Some(self.current_chunk().add_constant(Value::String(lexeme)))
         } else {
             None
         };
@@ -229,10 +247,9 @@ impl<'a> Compiler<'a> {
 
         if let Some(index) = index {
             self.emit_bytecode(OpCode::DefineGlobal(index));
-        } else {
+        } else if let Some(last) = self.current_scope.locals.last_mut() {
             // Remove uninitialized mark
-            let last_local_index = self.current_scope.locals.len() - 1;
-            self.current_scope.locals[last_local_index].depth = self.current_scope.depth;
+            last.depth = self.current_scope.depth;
         }
     }
 
@@ -249,11 +266,9 @@ impl<'a> Compiler<'a> {
             );
         }
 
-        let Some(token) = self.current_token.take() else {
-            return;
+        if let Some(token) = self.current_token.take() {
+            self.current_scope.add_local(token);
         };
-
-        self.current_scope.add_local(token);
     }
 
     fn return_statement(&mut self) {
@@ -294,7 +309,7 @@ impl<'a> Compiler<'a> {
         self.expression(Precedence::Lowest);
 
         // Emit the conditional jump
-        let then_jump = self.current_chunk.code.len();
+        let then_jump = self.current_chunk().code.len();
         self.emit_bytecode(OpCode::JumpIfFalse(0));
 
         self.emit_bytecode(OpCode::Pop);
@@ -306,7 +321,7 @@ impl<'a> Compiler<'a> {
         self.statement();
 
         // Emit the else jump
-        let else_jump = self.current_chunk.code.len();
+        let else_jump = self.current_chunk().code.len();
         self.emit_bytecode(OpCode::Jump(0));
 
         // Patch the jump to point to the code after the 'then' branch
@@ -329,11 +344,11 @@ impl<'a> Compiler<'a> {
 
     fn patch_jump(&mut self, jump_offset: usize) {
         // Calcula el valor del salto, ajustado por los bytes de la instrucción de salto en sí.
-        let jump = self.current_chunk.code.len() - jump_offset - 1;
+        let jump = self.current_chunk().code.len() - jump_offset - 1;
 
-        if let OpCode::JumpIfFalse(ref mut target) = self.current_chunk.code[jump_offset] {
+        if let OpCode::JumpIfFalse(ref mut target) = self.current_chunk().code[jump_offset] {
             *target = jump;
-        } else if let OpCode::Jump(ref mut target) = self.current_chunk.code[jump_offset] {
+        } else if let OpCode::Jump(ref mut target) = self.current_chunk().code[jump_offset] {
             *target = jump;
         } else {
             panic!("Expected a jump instruction at the given offset.");
@@ -348,7 +363,7 @@ impl<'a> Compiler<'a> {
         self.expression(Precedence::Lowest);
 
         // Emit the conditional jump
-        let while_jump = self.current_chunk.code.len();
+        let while_jump = self.current_chunk().code.len();
         self.emit_bytecode(OpCode::JumpIfFalse(0));
 
         self.emit_bytecode(OpCode::Pop);
@@ -358,7 +373,8 @@ impl<'a> Compiler<'a> {
         // Consume loop body
         self.statement();
 
-        self.emit_bytecode(OpCode::Loop(self.current_chunk.code.len() - 1));
+        let last = self.current_chunk().code.len() - 1;
+        self.emit_bytecode(OpCode::Loop(last));
         self.emit_bytecode(OpCode::Pop);
 
         // Patch the jump to point to the code after the while loop
@@ -374,9 +390,16 @@ impl<'a> Compiler<'a> {
     }
 
     pub fn emit_bytecode(&mut self, byte: OpCode) {
-        self.current_chunk
-            .write(byte, self.current_token_line() as usize);
+        let line = self.current_token_line() as usize;
+        self.current_chunk().write(byte, line);
     }
+
+    fn emit_return(&mut self) {
+        let line = self.current_token_line() as usize;
+        self.current_chunk().write(OpCode::Null, line);
+        self.current_chunk().write(OpCode::Return, line);
+    }
+
     fn expression_statement(&mut self) {
         self.expression(Precedence::Lowest);
         self.parse_end_statement();
@@ -457,7 +480,7 @@ fn identifier(compiler: &mut Compiler) {
         set_op = OpCode::SetLocal(position);
     } else {
         let index = compiler
-            .current_chunk
+            .current_chunk()
             .add_constant(Value::String(token.lexeme));
         get_op = OpCode::GetGlobal(index);
         set_op = OpCode::SetGlobal(index);
@@ -484,16 +507,15 @@ fn number(compiler: &mut Compiler) {
             .parse()
             .expect("Not a valid number"),
     );
-    let index = compiler.current_chunk.add_constant(value);
+    let index = compiler.current_chunk().add_constant(value);
     compiler.emit_bytecode(OpCode::Constant(index));
 }
 
 fn literal(compiler: &mut Compiler) {
     match compiler.current_token_kind() {
         TokenType::String => {
-            let index = compiler
-                .current_chunk
-                .add_constant(Value::String(compiler.current_token_lexeme()));
+            let lexeme = compiler.current_token_lexeme();
+            let index = compiler.current_chunk().add_constant(Value::String(lexeme));
             compiler.emit_bytecode(OpCode::Constant(index));
         }
         TokenType::True => compiler.emit_bytecode(OpCode::True),

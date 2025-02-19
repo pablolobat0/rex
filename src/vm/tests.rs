@@ -5,6 +5,7 @@ mod test {
         vm::{
             chunk::{OpCode, Value},
             compiler::Compiler,
+            object::FunctionType,
             vm_impl::{InterpretResult, VirtualMachine},
         },
     };
@@ -24,7 +25,7 @@ mod test {
 
     fn test_number(input: &str, result: f64) {
         let mut lexer = Lexer::new(input);
-        let mut compiler = Compiler::new(&mut lexer);
+        let mut compiler = Compiler::new(&mut lexer, FunctionType::Script);
         compiler.compile_one_statement();
 
         check_compiler_errors(&compiler);
@@ -42,7 +43,7 @@ mod test {
 
     fn test_bool(input: &str, result: bool) {
         let mut lexer = Lexer::new(input);
-        let mut compiler = Compiler::new(&mut lexer);
+        let mut compiler = Compiler::new(&mut lexer, FunctionType::Script);
 
         compiler.compile_one_statement();
 
@@ -61,7 +62,7 @@ mod test {
 
     fn test_string(input: &str, result: String) {
         let mut lexer = Lexer::new(input);
-        let mut compiler = Compiler::new(&mut lexer);
+        let mut compiler = Compiler::new(&mut lexer, FunctionType::Script);
 
         compiler.compile_one_statement();
 
@@ -96,7 +97,7 @@ mod test {
     #[test]
     fn null() {
         let mut lexer = Lexer::new("null");
-        let mut compiler = Compiler::new(&mut lexer);
+        let mut compiler = Compiler::new(&mut lexer, FunctionType::Script);
 
         assert!(
             compiler.compile_one_statement(),
@@ -143,7 +144,7 @@ mod test {
     fn division_by_zero() {
         let input = "10 / 0";
         let mut lexer = Lexer::new(input);
-        let mut compiler = Compiler::new(&mut lexer);
+        let mut compiler = Compiler::new(&mut lexer, FunctionType::Script);
 
         assert!(
             compiler.compile_one_statement(),
@@ -217,7 +218,7 @@ mod test {
         let input = "let a = 1";
 
         let mut lexer = Lexer::new(input);
-        let mut compiler = Compiler::new(&mut lexer);
+        let mut compiler = Compiler::new(&mut lexer, FunctionType::Script);
 
         compiler.compile();
 
@@ -239,7 +240,7 @@ mod test {
         let input = "let a = 1\nlet b = a + 3";
 
         let mut lexer = Lexer::new(input);
-        let mut compiler = Compiler::new(&mut lexer);
+        let mut compiler = Compiler::new(&mut lexer, FunctionType::Script);
 
         compiler.compile();
 
@@ -261,7 +262,7 @@ mod test {
         let input = "let a = 1\na = 3";
 
         let mut lexer = Lexer::new(input);
-        let mut compiler = Compiler::new(&mut lexer);
+        let mut compiler = Compiler::new(&mut lexer, FunctionType::Script);
 
         compiler.compile();
 
@@ -285,18 +286,18 @@ mod test {
                    }";
 
         let mut lexer = Lexer::new(input);
-        let mut compiler = Compiler::new(&mut lexer);
+        let mut compiler = Compiler::new(&mut lexer, FunctionType::Script);
 
         compiler.compile_one_statement();
 
         check_compiler_errors(&compiler);
         assert_eq!(
-            compiler.current_chunk.code,
+            compiler.current_chunk().code,
             vec![OpCode::Constant(0), OpCode::Pop]
         );
 
         assert_eq!(
-            compiler.current_chunk.constants.first(),
+            compiler.current_chunk().constants.first(),
             Some(&Value::Number(14.0))
         );
 
@@ -320,19 +321,21 @@ mod test {
                     }";
 
         let mut lexer = Lexer::new(input);
-        let mut compiler = Compiler::new(&mut lexer);
+        let mut compiler = Compiler::new(&mut lexer, FunctionType::Script);
 
         compiler.compile();
 
         assert_eq!(
-            compiler.current_chunk.code,
+            compiler.current_chunk().code,
             vec![
                 OpCode::Constant(0),
-                OpCode::GetLocal(0),
                 OpCode::GetLocal(1),
+                OpCode::GetLocal(2),
                 OpCode::Pop,
                 OpCode::Pop,
-                OpCode::Pop
+                OpCode::Pop,
+                OpCode::Null,
+                OpCode::Return
             ]
         );
 
@@ -355,22 +358,24 @@ mod test {
                     }";
 
         let mut lexer = Lexer::new(input);
-        let mut compiler = Compiler::new(&mut lexer);
+        let mut compiler = Compiler::new(&mut lexer, FunctionType::Script);
 
         compiler.compile();
 
         check_compiler_errors(&compiler);
 
         assert_eq!(
-            compiler.current_chunk.code,
+            compiler.current_chunk().code,
             vec![
                 OpCode::Constant(0),
-                OpCode::GetLocal(0),
+                OpCode::GetLocal(1),
                 OpCode::Constant(1),
-                OpCode::SetLocal(1),
+                OpCode::SetLocal(2),
                 OpCode::Pop,
                 OpCode::Pop,
-                OpCode::Pop
+                OpCode::Pop,
+                OpCode::Null,
+                OpCode::Return
             ]
         );
 
@@ -430,7 +435,7 @@ mod test {
 
         for (input, result) in tests {
             let mut lexer = Lexer::new(input);
-            let mut compiler = Compiler::new(&mut lexer);
+            let mut compiler = Compiler::new(&mut lexer, FunctionType::Script);
 
             compiler.compile();
 
@@ -458,7 +463,7 @@ mod test {
                     ";
 
         let mut lexer = Lexer::new(input);
-        let mut compiler = Compiler::new(&mut lexer);
+        let mut compiler = Compiler::new(&mut lexer, FunctionType::Script);
 
         compiler.compile();
 
@@ -480,7 +485,7 @@ mod test {
         let input = "return 1";
 
         let mut lexer = Lexer::new(input);
-        let mut compiler = Compiler::new(&mut lexer);
+        let mut compiler = Compiler::new(&mut lexer, FunctionType::Script);
 
         compiler.compile();
 

@@ -49,16 +49,6 @@ impl fmt::Display for Value {
     }
 }
 
-impl Value {
-    pub fn is_number(&self) -> bool {
-        matches!(self, Value::Number(_))
-    }
-
-    pub fn is_boolean(&self) -> bool {
-        matches!(self, Value::Boolean(_))
-    }
-}
-
 #[derive(Debug)]
 pub struct Chunk {
     pub code: Vec<OpCode>,
@@ -90,20 +80,6 @@ impl Chunk {
 
     pub fn get(&self, index: usize) -> Option<&OpCode> {
         self.code.get(index)
-    }
-
-    pub fn get_line(&self, index: usize) -> Option<usize> {
-        let mut acumulated = 0;
-
-        for (line, count) in &self.lines {
-            acumulated += count;
-
-            if index < acumulated {
-                return Some(*line);
-            }
-        }
-
-        None
     }
 
     pub fn add_constant(&mut self, constant: Value) -> usize {

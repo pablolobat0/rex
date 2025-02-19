@@ -6,6 +6,7 @@ use crate::{
     },
     vm::{
         compiler::Compiler,
+        object::FunctionType,
         vm_impl::{InterpretResult, VirtualMachine},
     },
 };
@@ -73,7 +74,7 @@ pub fn start_vm() {
             .expect("error reading line");
 
         let mut lexer = Lexer::new(&input);
-        let mut compiler = Compiler::new(&mut lexer);
+        let mut compiler = Compiler::new(&mut lexer, FunctionType::Script);
 
         if !compiler.compile_one_statement() {
             print_parser_errors(compiler.errors);
