@@ -47,6 +47,7 @@ pub enum TokenType {
     EOF,
     Illegal,
     Error,
+    Default,
 }
 
 impl fmt::Display for TokenType {
@@ -90,7 +91,8 @@ impl fmt::Display for TokenType {
             TokenType::Else => "else",
             TokenType::While => "while",
             TokenType::Null => "null",
-            TokenType::Error => "default",
+            TokenType::Error => "error",
+            TokenType::Default => "default",
         };
         write!(f, "{}", token_str)
     }
