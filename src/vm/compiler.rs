@@ -191,6 +191,7 @@ impl<'a> Compiler<'a> {
         // Initialize current and peek token
         self.next_token();
         self.next_token();
+
         while !self.current_token_is(TokenType::EOF) {
             self.statement();
             self.next_token();
@@ -200,9 +201,8 @@ impl<'a> Compiler<'a> {
     }
 
     fn end_compiler(&mut self) -> InterpretResult {
-        if !matches!(self.function_type, FunctionType::Script) {
-            self.emit_return(); // Solo funciones normales tienen return
-        }
+        // Implicit return
+        self.emit_return();
 
         // Check compilation errors
         if self.errors.is_empty() {
@@ -230,17 +230,7 @@ impl<'a> Compiler<'a> {
             return;
         }
 
-        let lexeme = self.current_token_lexeme();
-
-        if self.current_scope.depth != 0 {
-            self.declare_variable();
-        }
-
-        let index = if self.current_scope.depth == 0 {
-            Some(self.current_chunk().add_constant(Value::String(lexeme)))
-        } else {
-            None
-        };
+        let index = self.prepare_variable();
 
         if self.peek_token_is(TokenType::Equal) {
             // Consume identifier
@@ -255,15 +245,36 @@ impl<'a> Compiler<'a> {
 
         self.parse_end_statement();
 
+        self.finalize_variable(index);
+    }
+
+    fn prepare_variable(&mut self) -> Option<usize> {
+        let lexeme = self.current_token_lexeme();
+        let index = if self.current_scope.depth == 0 {
+            Some(self.current_chunk().add_constant(Value::String(lexeme)))
+        } else {
+            self.declare_local_variable();
+            None
+        };
+
+        index
+    }
+
+    fn finalize_variable(&mut self, index: Option<usize>) {
         if let Some(index) = index {
             self.emit_bytecode(OpCode::DefineGlobal(index));
-        } else if let Some(last) = self.current_scope.locals.last_mut() {
-            // Remove uninitialized mark
+        } else {
+            self.remove_uninitialized_mark();
+        }
+    }
+
+    fn remove_uninitialized_mark(&mut self) {
+        if let Some(last) = self.current_scope.locals.last_mut() {
             last.depth = self.current_scope.depth;
         }
     }
 
-    fn declare_variable(&mut self) {
+    fn declare_local_variable(&mut self) {
         let has_existing_variable = self.current_scope.locals.iter().rev().any(|local| {
             local.depth == self.current_scope.depth
                 && local.name.lexeme == self.current_token_lexeme()
@@ -284,80 +295,81 @@ impl<'a> Compiler<'a> {
     fn function_declaration(&mut self) {
         self.expect_peek(TokenType::Identifier);
 
+        let define_function_index = self.prepare_variable();
+
+        if define_function_index.is_none() {
+            self.remove_uninitialized_mark();
+        }
+
+        // New compiler for the function
         let lexeme = self.current_token_lexeme();
-        if self.current_scope.depth != 0 {
-            self.declare_variable();
-        }
-
-        let index = if self.current_scope.depth == 0 {
-            Some(
-                self.current_chunk()
-                    .add_constant(Value::String(lexeme.clone())),
-            )
-        } else {
-            None
-        };
-
-        if index.is_none() {
-            if let Some(last) = self.current_scope.locals.last_mut() {
-                // Remove uninitialized mark
-                last.depth = self.current_scope.depth;
-            }
-        }
-
         let mut compiler = Compiler::new(self.lexer.clone(), FunctionType::Function(lexeme));
+        // Initialize current and peek token
         compiler.current_token = self.current_token.take();
         compiler.peek_token = self.peek_token.take();
 
-        compiler.current_scope.begin_scope();
-        compiler.expect_peek(TokenType::LeftParen);
-        if !compiler.peek_token_is(TokenType::RightParen) {
-            while compiler.peek_token_is(TokenType::Identifier) {
-                compiler.next_token();
-                compiler.function.arity += 1;
+        compiler.parse_parameters();
 
-                let lexeme = compiler.current_token_lexeme();
-                let index = if compiler.current_scope.depth == 0 {
-                    Some(compiler.current_chunk().add_constant(Value::String(lexeme)))
-                } else {
-                    None
-                };
-
-                if compiler.current_scope.depth != 0 {
-                    compiler.declare_variable();
-                }
-
-                if index.is_none() {
-                    if let Some(last) = compiler.current_scope.locals.last_mut() {
-                        last.depth = compiler.current_scope.depth;
-                    }
-                }
-
-                if compiler.peek_token_is(TokenType::RightParen) {
-                    break;
-                }
-
-                if !compiler.expect_peek(TokenType::Comma) {
-                    return;
-                }
-            }
+        if !compiler.expect_peek(TokenType::LeftBrace) {
+            return;
         }
-        compiler.next_token();
-        compiler.expect_peek(TokenType::LeftBrace);
+
         compiler.block();
+
         compiler.end_compiler();
-        let i = self
+
+        let execute_function_index = self
             .current_chunk()
             .add_constant(Value::Function(compiler.function));
-        self.emit_bytecode(OpCode::Constant(i));
+        self.emit_bytecode(OpCode::Constant(execute_function_index));
 
+        // Initialize current and peek token
         self.current_token = compiler.current_token.take();
         self.peek_token = compiler.peek_token.take();
-        if let Some(index) = index {
-            self.emit_bytecode(OpCode::DefineGlobal(index));
-        } else if let Some(last) = self.current_scope.locals.last_mut() {
-            // Remove uninitialized mark
-            last.depth = self.current_scope.depth;
+
+        self.finalize_variable(define_function_index);
+    }
+
+    fn parse_parameters(&mut self) {
+        // Unclosed scope because it ends when compiler ends
+        self.current_scope.begin_scope();
+
+        if !self.expect_peek(TokenType::LeftParen) {
+            return;
+        }
+
+        // Function without parameters
+        if self.peek_token_is(TokenType::RightParen) {
+            self.next_token();
+            return;
+        }
+
+        if !self.expect_peek(TokenType::Identifier) {
+            return;
+        }
+
+        self.function.arity += 1;
+        self.parse_parameter();
+
+        while !self.peek_token_is(TokenType::RightParen) {
+            if !self.expect_peek(TokenType::Comma) {
+                return;
+            }
+            if !self.expect_peek(TokenType::Identifier) {
+                return;
+            }
+            self.function.arity += 1;
+            self.parse_parameter();
+        }
+
+        self.next_token();
+    }
+
+    fn parse_parameter(&mut self) {
+        let index = self.prepare_variable();
+
+        if index.is_none() {
+            self.remove_uninitialized_mark();
         }
     }
 
@@ -672,15 +684,16 @@ fn call_expression(compiler: &mut Compiler) {
     arguments += 1;
     compiler.expression(Precedence::Lowest);
 
-    while compiler.peek_token_is(TokenType::Comma) {
-        // Consume argument
-        compiler.next_token();
+    while !compiler.peek_token_is(TokenType::RightParen) {
+        if !compiler.expect_peek(TokenType::Comma) {
+            return;
+        }
         // Consume comma
         compiler.next_token();
 
         compiler.expression(Precedence::Lowest);
         arguments += 1;
     }
-    compiler.expect_peek(TokenType::RightParen);
+    compiler.next_token();
     compiler.emit_bytecode(OpCode::Call(arguments));
 }

@@ -74,7 +74,6 @@ impl VirtualMachine {
             };
             let chunk = &mut frame.function.chunk;
             let Some(instruction) = chunk.get(frame.pc) else {
-                // No hay más instrucciones: terminar la ejecución
                 self.frames.pop();
                 if self.frames.is_empty() {
                     return InterpretResult::Ok;
@@ -260,6 +259,7 @@ impl VirtualMachine {
                     let new_frame = CallFrame {
                         function: function.clone(),
                         pc: 0,
+                        // Move the pointer to where function arguments start
                         slots_start: self.stack.len() - arguments_count,
                     };
 
@@ -275,6 +275,7 @@ impl VirtualMachine {
                         return InterpretResult::Ok;
                     }
 
+                    // Remove slots used for the frame
                     self.stack.truncate(slots_start);
                     self.stack.push(result);
                 }

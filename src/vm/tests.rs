@@ -336,6 +336,8 @@ mod test {
                 OpCode::Pop,
                 OpCode::Pop,
                 OpCode::Pop,
+                OpCode::Null,
+                OpCode::Return,
             ]
         );
 
@@ -374,6 +376,8 @@ mod test {
                 OpCode::Pop,
                 OpCode::Pop,
                 OpCode::Pop,
+                OpCode::Null,
+                OpCode::Return,
             ]
         );
 
