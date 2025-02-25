@@ -522,4 +522,29 @@ mod test {
 
         assert_eq!(vm.globals.get("result"), Some(&Value::Number(1.0)));
     }
+
+    #[test]
+    fn function_declaration_and_call_with_arguments() {
+        let input = "fn add(a, b) {
+            return a + b
+        }
+        let result = add(1, 2)";
+
+        let lexer = Lexer::new(input);
+        let mut compiler = Compiler::new(Rc::new(RefCell::new(lexer)), FunctionType::Script);
+
+        compiler.compile();
+
+        check_compiler_errors(&compiler);
+
+        let mut vm = VirtualMachine::new(take(&mut compiler.function));
+
+        assert_eq!(
+            vm.interpret(),
+            InterpretResult::Ok,
+            "VM should run without errors"
+        );
+
+        assert_eq!(vm.globals.get("result"), Some(&Value::Number(3.0)));
+    }
 }

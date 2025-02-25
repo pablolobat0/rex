@@ -312,7 +312,35 @@ impl<'a> Compiler<'a> {
         compiler.current_scope.begin_scope();
         compiler.expect_peek(TokenType::LeftParen);
         if !compiler.peek_token_is(TokenType::RightParen) {
-            return;
+            while compiler.peek_token_is(TokenType::Identifier) {
+                compiler.next_token();
+                compiler.function.arity += 1;
+
+                let lexeme = compiler.current_token_lexeme();
+                let index = if compiler.current_scope.depth == 0 {
+                    Some(compiler.current_chunk().add_constant(Value::String(lexeme)))
+                } else {
+                    None
+                };
+
+                if compiler.current_scope.depth != 0 {
+                    compiler.declare_variable();
+                }
+
+                if index.is_none() {
+                    if let Some(last) = compiler.current_scope.locals.last_mut() {
+                        last.depth = compiler.current_scope.depth;
+                    }
+                }
+
+                if compiler.peek_token_is(TokenType::RightParen) {
+                    break;
+                }
+
+                if !compiler.expect_peek(TokenType::Comma) {
+                    return;
+                }
+            }
         }
         compiler.next_token();
         compiler.expect_peek(TokenType::LeftBrace);
@@ -630,9 +658,29 @@ fn infix_expression(compiler: &mut Compiler) {
 }
 
 fn call_expression(compiler: &mut Compiler) {
+    let mut arguments = 0;
     if compiler.peek_token_is(TokenType::RightParen) {
         compiler.emit_bytecode(OpCode::Call(0));
         //Consume left paren
         compiler.next_token();
+        return;
     }
+
+    //Consume left paren
+    compiler.next_token();
+
+    arguments += 1;
+    compiler.expression(Precedence::Lowest);
+
+    while compiler.peek_token_is(TokenType::Comma) {
+        // Consume argument
+        compiler.next_token();
+        // Consume comma
+        compiler.next_token();
+
+        compiler.expression(Precedence::Lowest);
+        arguments += 1;
+    }
+    compiler.expect_peek(TokenType::RightParen);
+    compiler.emit_bytecode(OpCode::Call(arguments));
 }
