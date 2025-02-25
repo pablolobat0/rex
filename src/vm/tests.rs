@@ -1,5 +1,7 @@
 #[cfg(test)]
 mod test {
+    use std::{cell::RefCell, mem::take, rc::Rc};
+
     use crate::{
         common::lexer::lexer_impl::Lexer,
         vm::{
@@ -24,13 +26,13 @@ mod test {
     }
 
     fn test_number(input: &str, result: f64) {
-        let mut lexer = Lexer::new(input);
-        let mut compiler = Compiler::new(&mut lexer, FunctionType::Script);
+        let lexer = Lexer::new(input);
+        let mut compiler = Compiler::new(Rc::new(RefCell::new(lexer)), FunctionType::Script);
         compiler.compile_one_statement();
 
         check_compiler_errors(&compiler);
 
-        let mut vm = VirtualMachine::new(&mut compiler);
+        let mut vm = VirtualMachine::new(take(&mut compiler.function));
 
         assert_eq!(
             vm.interpret(),
@@ -38,18 +40,18 @@ mod test {
             "VM should run without errors"
         );
 
-        assert_eq!(vm.stack.first(), Some(&Value::Number(result)));
+        assert_eq!(vm.stack.get(1), Some(&Value::Number(result)));
     }
 
     fn test_bool(input: &str, result: bool) {
-        let mut lexer = Lexer::new(input);
-        let mut compiler = Compiler::new(&mut lexer, FunctionType::Script);
+        let lexer = Lexer::new(input);
+        let mut compiler = Compiler::new(Rc::new(RefCell::new(lexer)), FunctionType::Script);
 
         compiler.compile_one_statement();
 
         check_compiler_errors(&compiler);
 
-        let mut vm = VirtualMachine::new(&mut compiler);
+        let mut vm = VirtualMachine::new(take(&mut compiler.function));
 
         assert_eq!(
             vm.interpret(),
@@ -57,18 +59,18 @@ mod test {
             "VM should run without errors"
         );
 
-        assert_eq!(vm.stack.first(), Some(&Value::Boolean(result)));
+        assert_eq!(vm.stack.get(1), Some(&Value::Boolean(result)));
     }
 
     fn test_string(input: &str, result: String) {
-        let mut lexer = Lexer::new(input);
-        let mut compiler = Compiler::new(&mut lexer, FunctionType::Script);
+        let lexer = Lexer::new(input);
+        let mut compiler = Compiler::new(Rc::new(RefCell::new(lexer)), FunctionType::Script);
 
         compiler.compile_one_statement();
 
         check_compiler_errors(&compiler);
 
-        let mut vm = VirtualMachine::new(&mut compiler);
+        let mut vm = VirtualMachine::new(take(&mut compiler.function));
 
         assert_eq!(
             vm.interpret(),
@@ -77,7 +79,7 @@ mod test {
         );
         println!("{}", input);
 
-        assert_eq!(vm.stack.first(), Some(&Value::String(result)));
+        assert_eq!(vm.stack.get(1), Some(&Value::String(result)));
     }
 
     #[test]
@@ -96,15 +98,15 @@ mod test {
 
     #[test]
     fn null() {
-        let mut lexer = Lexer::new("null");
-        let mut compiler = Compiler::new(&mut lexer, FunctionType::Script);
+        let lexer = Lexer::new("null");
+        let mut compiler = Compiler::new(Rc::new(RefCell::new(lexer)), FunctionType::Script);
 
         assert!(
             compiler.compile_one_statement(),
             "Compiler should compile without errors"
         );
 
-        let mut vm = VirtualMachine::new(&mut compiler);
+        let mut vm = VirtualMachine::new(take(&mut compiler.function));
 
         assert_eq!(
             vm.interpret(),
@@ -112,7 +114,7 @@ mod test {
             "VM should run without errors"
         );
 
-        assert_eq!(vm.stack.first(), Some(&Value::Null));
+        assert_eq!(vm.stack.get(1), Some(&Value::Null));
     }
 
     #[test]
@@ -143,15 +145,15 @@ mod test {
     #[test]
     fn division_by_zero() {
         let input = "10 / 0";
-        let mut lexer = Lexer::new(input);
-        let mut compiler = Compiler::new(&mut lexer, FunctionType::Script);
+        let lexer = Lexer::new(input);
+        let mut compiler = Compiler::new(Rc::new(RefCell::new(lexer)), FunctionType::Script);
 
         assert!(
             compiler.compile_one_statement(),
             "Compiler should compile without errors"
         );
 
-        let mut vm = VirtualMachine::new(&mut compiler);
+        let mut vm = VirtualMachine::new(take(&mut compiler.function));
         assert_eq!(
             vm.interpret(),
             InterpretResult::RuntimeError,
@@ -217,14 +219,14 @@ mod test {
     fn define_global() {
         let input = "let a = 1";
 
-        let mut lexer = Lexer::new(input);
-        let mut compiler = Compiler::new(&mut lexer, FunctionType::Script);
+        let lexer = Lexer::new(input);
+        let mut compiler = Compiler::new(Rc::new(RefCell::new(lexer)), FunctionType::Script);
 
         compiler.compile();
 
         check_compiler_errors(&compiler);
 
-        let mut vm = VirtualMachine::new(&mut compiler);
+        let mut vm = VirtualMachine::new(take(&mut compiler.function));
 
         assert_eq!(
             vm.interpret(),
@@ -239,14 +241,14 @@ mod test {
     fn get_global() {
         let input = "let a = 1\nlet b = a + 3";
 
-        let mut lexer = Lexer::new(input);
-        let mut compiler = Compiler::new(&mut lexer, FunctionType::Script);
+        let lexer = Lexer::new(input);
+        let mut compiler = Compiler::new(Rc::new(RefCell::new(lexer)), FunctionType::Script);
 
         compiler.compile();
 
         check_compiler_errors(&compiler);
 
-        let mut vm = VirtualMachine::new(&mut compiler);
+        let mut vm = VirtualMachine::new(take(&mut compiler.function));
 
         assert_eq!(
             vm.interpret(),
@@ -261,14 +263,14 @@ mod test {
     fn set_global() {
         let input = "let a = 1\na = 3";
 
-        let mut lexer = Lexer::new(input);
-        let mut compiler = Compiler::new(&mut lexer, FunctionType::Script);
+        let lexer = Lexer::new(input);
+        let mut compiler = Compiler::new(Rc::new(RefCell::new(lexer)), FunctionType::Script);
 
         compiler.compile();
 
         check_compiler_errors(&compiler);
 
-        let mut vm = VirtualMachine::new(&mut compiler);
+        let mut vm = VirtualMachine::new(take(&mut compiler.function));
 
         assert_eq!(
             vm.interpret(),
@@ -285,8 +287,8 @@ mod test {
                     let a = 14
                    }";
 
-        let mut lexer = Lexer::new(input);
-        let mut compiler = Compiler::new(&mut lexer, FunctionType::Script);
+        let lexer = Lexer::new(input);
+        let mut compiler = Compiler::new(Rc::new(RefCell::new(lexer)), FunctionType::Script);
 
         compiler.compile_one_statement();
 
@@ -301,7 +303,7 @@ mod test {
             Some(&Value::Number(14.0))
         );
 
-        let mut vm = VirtualMachine::new(&mut compiler);
+        let mut vm = VirtualMachine::new(take(&mut compiler.function));
 
         assert_eq!(
             vm.interpret(),
@@ -320,8 +322,8 @@ mod test {
                     b
                     }";
 
-        let mut lexer = Lexer::new(input);
-        let mut compiler = Compiler::new(&mut lexer, FunctionType::Script);
+        let lexer = Lexer::new(input);
+        let mut compiler = Compiler::new(Rc::new(RefCell::new(lexer)), FunctionType::Script);
 
         compiler.compile();
 
@@ -334,14 +336,12 @@ mod test {
                 OpCode::Pop,
                 OpCode::Pop,
                 OpCode::Pop,
-                OpCode::Null,
-                OpCode::Return
             ]
         );
 
         check_compiler_errors(&compiler);
 
-        let mut vm = VirtualMachine::new(&mut compiler);
+        let mut vm = VirtualMachine::new(take(&mut compiler.function));
 
         assert_eq!(
             vm.interpret(),
@@ -357,8 +357,8 @@ mod test {
                     b = 15
                     }";
 
-        let mut lexer = Lexer::new(input);
-        let mut compiler = Compiler::new(&mut lexer, FunctionType::Script);
+        let lexer = Lexer::new(input);
+        let mut compiler = Compiler::new(Rc::new(RefCell::new(lexer)), FunctionType::Script);
 
         compiler.compile();
 
@@ -374,12 +374,10 @@ mod test {
                 OpCode::Pop,
                 OpCode::Pop,
                 OpCode::Pop,
-                OpCode::Null,
-                OpCode::Return
             ]
         );
 
-        let mut vm = VirtualMachine::new(&mut compiler);
+        let mut vm = VirtualMachine::new(take(&mut compiler.function));
 
         assert_eq!(
             vm.interpret(),
@@ -434,14 +432,14 @@ mod test {
         ];
 
         for (input, result) in tests {
-            let mut lexer = Lexer::new(input);
-            let mut compiler = Compiler::new(&mut lexer, FunctionType::Script);
+            let lexer = Lexer::new(input);
+            let mut compiler = Compiler::new(Rc::new(RefCell::new(lexer)), FunctionType::Script);
 
             compiler.compile();
 
             check_compiler_errors(&compiler);
 
-            let mut vm = VirtualMachine::new(&mut compiler);
+            let mut vm = VirtualMachine::new(take(&mut compiler.function));
 
             assert_eq!(
                 vm.interpret(),
@@ -462,14 +460,14 @@ mod test {
                     }
                     ";
 
-        let mut lexer = Lexer::new(input);
-        let mut compiler = Compiler::new(&mut lexer, FunctionType::Script);
+        let lexer = Lexer::new(input);
+        let mut compiler = Compiler::new(Rc::new(RefCell::new(lexer)), FunctionType::Script);
 
         compiler.compile();
 
         check_compiler_errors(&compiler);
 
-        let mut vm = VirtualMachine::new(&mut compiler);
+        let mut vm = VirtualMachine::new(take(&mut compiler.function));
 
         assert_eq!(
             vm.interpret(),
@@ -484,19 +482,44 @@ mod test {
     fn return_statement() {
         let input = "return 1";
 
-        let mut lexer = Lexer::new(input);
-        let mut compiler = Compiler::new(&mut lexer, FunctionType::Script);
+        let lexer = Lexer::new(input);
+        let mut compiler = Compiler::new(Rc::new(RefCell::new(lexer)), FunctionType::Script);
 
         compiler.compile();
 
         check_compiler_errors(&compiler);
 
-        let mut vm = VirtualMachine::new(&mut compiler);
+        let mut vm = VirtualMachine::new(take(&mut compiler.function));
 
         assert_eq!(
             vm.interpret(),
             InterpretResult::Ok,
             "VM should run without errors"
         );
+    }
+
+    #[test]
+    fn function_declaration_and_call_without_arguments() {
+        let input = "fn add() {
+            return 1
+        }
+        let result = add()";
+
+        let lexer = Lexer::new(input);
+        let mut compiler = Compiler::new(Rc::new(RefCell::new(lexer)), FunctionType::Script);
+
+        compiler.compile();
+
+        check_compiler_errors(&compiler);
+
+        let mut vm = VirtualMachine::new(take(&mut compiler.function));
+
+        assert_eq!(
+            vm.interpret(),
+            InterpretResult::Ok,
+            "VM should run without errors"
+        );
+
+        assert_eq!(vm.globals.get("result"), Some(&Value::Number(1.0)));
     }
 }

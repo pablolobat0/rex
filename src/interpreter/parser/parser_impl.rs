@@ -306,9 +306,9 @@ impl<'a> Parser<'a> {
     // and infix_fn calling each other recursively using the current and peek
     // operator precedences
     fn parse_expression(&mut self, precedence: Precedence) -> Option<Expression> {
-        let Some(prefix_fn) =  self.prefix_parse_fns.get(&self.current_token_kind()) else {
-                self.current_error("No prefix parse function found for token: ");
-                return None;
+        let Some(prefix_fn) = self.prefix_parse_fns.get(&self.current_token_kind()) else {
+            self.current_error("No prefix parse function found for token: ");
+            return None;
         };
 
         let mut left_exp = prefix_fn(self)?;
@@ -316,8 +316,8 @@ impl<'a> Parser<'a> {
         while !self.current_token_is(TokenType::NewLine) && precedence < self.peek_precedence() {
             self.next_token(); // skip token
             let Some(infix_fn) = self.infix_parse_fns.get(&self.current_token_kind()) else {
-                    self.current_error("No infix parse function found for token: ");
-                    return None;
+                self.current_error("No infix parse function found for token: ");
+                return None;
             };
 
             left_exp = infix_fn(self, left_exp)?;
@@ -346,15 +346,22 @@ impl<'a> Parser<'a> {
 
 // Prefix functions
 fn parse_identifier(parser: &mut Parser<'_>) -> Option<Expression> {
-    parser.current_token.take().map(|token| Expression::Identifier(Identifier::new(token)))
+    parser
+        .current_token
+        .take()
+        .map(|token| Expression::Identifier(Identifier::new(token)))
 }
 
 fn parse_integer_literal(parser: &mut Parser<'_>) -> Option<Expression> {
-    let Ok(value) =  parser.current_token.as_ref().
-        map(|t| t.lexeme.clone()) .unwrap_or_default() 
-        .parse::<i64>() else {
-            parser.current_error("Could not parse as integer: ");
-            return None;
+    let Ok(value) = parser
+        .current_token
+        .as_ref()
+        .map(|t| t.lexeme.clone())
+        .unwrap_or_default()
+        .parse::<i64>()
+    else {
+        parser.current_error("Could not parse as integer: ");
+        return None;
     };
 
     Some(Expression::Integer(IntegerLiteral::new(
@@ -364,11 +371,15 @@ fn parse_integer_literal(parser: &mut Parser<'_>) -> Option<Expression> {
 }
 
 fn parse_float_literal(parser: &mut Parser<'_>) -> Option<Expression> {
-    let Ok(value) = parser.current_token.as_ref()
-        .map(|t| t.lexeme.clone()).unwrap_or_default()
-        .parse::<f64>() else {
-            parser.current_error("Could not parse as float: ");
-            return None;
+    let Ok(value) = parser
+        .current_token
+        .as_ref()
+        .map(|t| t.lexeme.clone())
+        .unwrap_or_default()
+        .parse::<f64>()
+    else {
+        parser.current_error("Could not parse as float: ");
+        return None;
     };
 
     Some(Expression::Float(FloatLiteral::new(
@@ -413,8 +424,8 @@ fn parse_prefix_expression(parser: &mut Parser<'_>) -> Option<Expression> {
     parser.next_token();
 
     let Some(right) = parser.parse_expression(Precedence::Prefix) else {
-            parser.current_error("Could not parser right-side of prefix expression for operator: ");
-            return None;
+        parser.current_error("Could not parser right-side of prefix expression for operator: ");
+        return None;
     };
 
     Some(Expression::Prefix(PrefixExpression::new(
@@ -486,8 +497,6 @@ fn parse_parameters(parser: &mut Parser<'_>) -> Option<Vec<Identifier>> {
         return Some(arguments);
     }
 
-    parser.current_token.as_ref()?;
-
     parser.next_token();
 
     let identifier = Identifier::new(parser.current_token.take()?);
@@ -525,8 +534,8 @@ fn parse_infix_expression(parser: &mut Parser<'_>, left: Expression) -> Option<E
     parser.next_token();
 
     let Some(right) = parser.parse_expression(precedence) else {
-            parser.current_error("Could not parse right-part of infix expression for operator: ");
-            return None;
+        parser.current_error("Could not parse right-part of infix expression for operator: ");
+        return None;
     };
 
     Some(Expression::Infix(InfixExpression::new(
@@ -547,8 +556,10 @@ fn parse_grouped_expression(parser: &mut Parser<'_>) -> Option<Expression> {
 // <call_expression> ::= <expression> ( <arguments>? )
 fn parse_call_expression(parser: &mut Parser<'_>, left: Expression) -> Option<Expression> {
     let token = parser.current_token.take();
-    let arguments = parse_arguments(parser)?; 
-    Some(Expression::Call(CallExpression::new( token?, left, arguments)))
+    let arguments = parse_arguments(parser)?;
+    Some(Expression::Call(CallExpression::new(
+        token?, left, arguments,
+    )))
 }
 
 // <arguments> ::= <expression> (, <expression> )*
@@ -573,7 +584,7 @@ fn parse_arguments(parser: &mut Parser<'_>) -> Option<Vec<Expression>> {
             parser.next_token();
         }
 
-        let argument = parser.parse_expression(Precedence::Lowest)?; 
+        let argument = parser.parse_expression(Precedence::Lowest)?;
 
         arguments.push(argument);
     }

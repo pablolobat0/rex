@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use crate::common::{
     lexer::{
@@ -21,7 +21,7 @@ type InfixParseFn = fn(&mut Compiler);
 
 #[derive(Debug)]
 pub struct Compiler<'a> {
-    lexer: &'a mut Lexer<'a>,
+    lexer: Rc<RefCell<Lexer<'a>>>,
     current_token: Option<Token>,
     peek_token: Option<Token>,
     pub errors: Vec<String>,
@@ -30,18 +30,15 @@ pub struct Compiler<'a> {
     precedences: HashMap<TokenType, Precedence>,
     current_scope: Scope,
     function_type: FunctionType,
-    function: Function,
+    pub function: Function,
 }
 
 impl<'a> Compiler<'a> {
-    pub fn new(lexer: &'a mut Lexer<'a>, function_type: FunctionType) -> Compiler<'a> {
-        let current_token = Some(lexer.next_token());
-        let peek_token = Some(lexer.next_token());
-
+    pub fn new(lexer: Rc<RefCell<Lexer<'a>>>, function_type: FunctionType) -> Compiler<'a> {
         let mut compiler = Compiler {
             lexer,
-            current_token,
-            peek_token,
+            current_token: None,
+            peek_token: None,
             errors: vec![],
             prefix_parse_fns: HashMap::new(),
             infix_parse_fns: HashMap::new(),
@@ -50,6 +47,10 @@ impl<'a> Compiler<'a> {
             function_type,
             function: Function::new(),
         };
+
+        if let FunctionType::Function(name) = &compiler.function_type {
+            compiler.function.name.clone_from(name);
+        }
 
         // Reserve first local for vm use
         compiler.current_scope.add_local(Token {
@@ -100,12 +101,14 @@ impl<'a> Compiler<'a> {
             .insert(TokenType::Less, infix_expression);
         self.infix_parse_fns
             .insert(TokenType::LessEqual, infix_expression);
+        self.infix_parse_fns
+            .insert(TokenType::LeftParen, call_expression);
     }
 
     // Consumes a token, updating current and peek token
     fn next_token(&mut self) {
         self.current_token = self.peek_token.take();
-        self.peek_token = Some(self.lexer.next_token());
+        self.peek_token = Some(self.lexer.borrow_mut().next_token());
     }
 
     fn expect_peek(&mut self, token: TokenType) -> bool {
@@ -185,6 +188,9 @@ impl<'a> Compiler<'a> {
     }
 
     pub fn compile(&mut self) -> InterpretResult {
+        // Initialize current and peek token
+        self.next_token();
+        self.next_token();
         while !self.current_token_is(TokenType::EOF) {
             self.statement();
             self.next_token();
@@ -194,7 +200,9 @@ impl<'a> Compiler<'a> {
     }
 
     fn end_compiler(&mut self) -> InterpretResult {
-        self.emit_return();
+        if !matches!(self.function_type, FunctionType::Script) {
+            self.emit_return(); // Solo funciones normales tienen return
+        }
 
         // Check compilation errors
         if self.errors.is_empty() {
@@ -207,6 +215,7 @@ impl<'a> Compiler<'a> {
     fn statement(&mut self) {
         match self.current_token_kind() {
             TokenType::Let => self.let_statement(),
+            TokenType::Function => self.function_declaration(),
             TokenType::Return => self.return_statement(),
             TokenType::LeftBrace => self.block(),
             TokenType::If => self.if_statement(),
@@ -221,12 +230,13 @@ impl<'a> Compiler<'a> {
             return;
         }
 
+        let lexeme = self.current_token_lexeme();
+
         if self.current_scope.depth != 0 {
             self.declare_variable();
         }
 
         let index = if self.current_scope.depth == 0 {
-            let lexeme = self.current_token_lexeme();
             Some(self.current_chunk().add_constant(Value::String(lexeme)))
         } else {
             None
@@ -271,6 +281,58 @@ impl<'a> Compiler<'a> {
         };
     }
 
+    fn function_declaration(&mut self) {
+        self.expect_peek(TokenType::Identifier);
+
+        let lexeme = self.current_token_lexeme();
+        if self.current_scope.depth != 0 {
+            self.declare_variable();
+        }
+
+        let index = if self.current_scope.depth == 0 {
+            Some(
+                self.current_chunk()
+                    .add_constant(Value::String(lexeme.clone())),
+            )
+        } else {
+            None
+        };
+
+        if index.is_none() {
+            if let Some(last) = self.current_scope.locals.last_mut() {
+                // Remove uninitialized mark
+                last.depth = self.current_scope.depth;
+            }
+        }
+
+        let mut compiler = Compiler::new(self.lexer.clone(), FunctionType::Function(lexeme));
+        compiler.current_token = self.current_token.take();
+        compiler.peek_token = self.peek_token.take();
+
+        compiler.current_scope.begin_scope();
+        compiler.expect_peek(TokenType::LeftParen);
+        if !compiler.peek_token_is(TokenType::RightParen) {
+            return;
+        }
+        compiler.next_token();
+        compiler.expect_peek(TokenType::LeftBrace);
+        compiler.block();
+        compiler.end_compiler();
+        let i = self
+            .current_chunk()
+            .add_constant(Value::Function(compiler.function));
+        self.emit_bytecode(OpCode::Constant(i));
+
+        self.current_token = compiler.current_token.take();
+        self.peek_token = compiler.peek_token.take();
+        if let Some(index) = index {
+            self.emit_bytecode(OpCode::DefineGlobal(index));
+        } else if let Some(last) = self.current_scope.locals.last_mut() {
+            // Remove uninitialized mark
+            last.depth = self.current_scope.depth;
+        }
+    }
+
     fn return_statement(&mut self) {
         // Consume return
         self.next_token();
@@ -278,6 +340,7 @@ impl<'a> Compiler<'a> {
         self.expression(Precedence::Lowest);
 
         self.emit_bytecode(OpCode::Return);
+        self.parse_end_statement();
     }
 
     fn block(&mut self) {
@@ -451,6 +514,9 @@ impl<'a> Compiler<'a> {
     // Debug functions
 
     pub fn compile_one_statement(&mut self) -> bool {
+        // Initialize current and peek token
+        self.next_token();
+        self.next_token();
         self.one_statement();
         self.errors.is_empty()
     }
@@ -560,5 +626,13 @@ fn infix_expression(compiler: &mut Compiler) {
         TokenType::Greater => compiler.emit_bytecode(OpCode::Greater),
         TokenType::GreaterEqual => compiler.emit_bytecode(OpCode::GreaterEqual),
         _ => compiler.current_error("Unknow prefix operator"),
+    }
+}
+
+fn call_expression(compiler: &mut Compiler) {
+    if compiler.peek_token_is(TokenType::RightParen) {
+        compiler.emit_bytecode(OpCode::Call(0));
+        //Consume left paren
+        compiler.next_token();
     }
 }
