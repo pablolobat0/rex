@@ -1,6 +1,8 @@
 use std::fmt;
 
-#[derive(Debug, PartialEq)]
+use super::object::Function;
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum OpCode {
     Constant(usize),
     Null,
@@ -20,6 +22,7 @@ pub enum OpCode {
     Divide,
     Return,
     Pop,
+    Call(usize),
     DefineGlobal(usize),
     GetGlobal(usize),
     SetGlobal(usize),
@@ -35,6 +38,7 @@ pub enum Value {
     Number(f64),
     Boolean(bool),
     String(String),
+    Function(Function),
     Null,
 }
 
@@ -44,12 +48,13 @@ impl fmt::Display for Value {
             Value::Number(n) => write!(f, "{}", n),
             Value::Boolean(b) => write!(f, "{}", b),
             Value::String(s) => write!(f, "{}", s),
+            Value::Function(_) => write!(f, "function"),
             Value::Null => write!(f, "null"),
         }
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Chunk {
     pub code: Vec<OpCode>,
     pub constants: Vec<Value>,

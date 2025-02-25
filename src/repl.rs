@@ -10,7 +10,12 @@ use crate::{
         vm_impl::{InterpretResult, VirtualMachine},
     },
 };
-use std::io::{self, Write};
+use std::{
+    cell::RefCell,
+    io::{self, Write},
+    mem::take,
+    rc::Rc,
+};
 use std::{collections::HashMap, env};
 
 const PROMPT: &str = "> ";
@@ -73,15 +78,16 @@ pub fn start_vm() {
             .read_line(&mut input)
             .expect("error reading line");
 
-        let mut lexer = Lexer::new(&input);
-        let mut compiler = Compiler::new(&mut lexer, FunctionType::Script);
+        let lexer = Lexer::new(&input);
+        let mut compiler = Compiler::new(Rc::new(RefCell::new(lexer)), FunctionType::Script);
 
         if !compiler.compile_one_statement() {
             print_parser_errors(compiler.errors);
             continue;
         }
 
-        let mut vm = VirtualMachine::new_with_globals(&mut compiler, globals.clone());
+        let mut vm =
+            VirtualMachine::new_with_globals(take(&mut compiler.function), globals.clone());
 
         // Run the input
         if vm.interpret() == InterpretResult::Ok {

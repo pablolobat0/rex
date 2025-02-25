@@ -3,18 +3,28 @@ use super::chunk::Chunk;
 #[derive(Debug)]
 pub enum FunctionType {
     Script,
-    Function,
+    Function(String),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Function {
-    arity: u32,
+    pub arity: usize,
     pub chunk: Chunk,
-    name: String,
+    pub name: String,
 }
 
 impl Function {
     pub fn new() -> Self {
+        Function {
+            arity: 0,
+            chunk: Chunk::new(),
+            name: String::new(),
+        }
+    }
+}
+
+impl Default for Function {
+    fn default() -> Self {
         Function {
             arity: 0,
             chunk: Chunk::new(),

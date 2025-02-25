@@ -1,18 +1,26 @@
-use std::collections::HashMap;
+use std::cell::RefCell;
+use std::mem::take;
+use std::{collections::HashMap, rc::Rc};
 
 use crate::common::lexer::lexer_impl::Lexer;
 
 use super::{
     chunk::{value_equal, OpCode, Value},
     compiler::Compiler,
-    object::FunctionType,
+    object::{Function, FunctionType},
 };
 
 #[derive(Debug)]
-pub struct VirtualMachine<'a> {
+struct CallFrame {
+    function: Function,
     pc: usize,
+    slots_start: usize,
+}
+
+#[derive(Debug)]
+pub struct VirtualMachine {
+    frames: Vec<CallFrame>,
     pub stack: Vec<Value>,
-    compiler: &'a mut Compiler<'a>,
     pub globals: HashMap<String, Value>,
 }
 
@@ -23,38 +31,57 @@ pub enum InterpretResult {
     RuntimeError,
 }
 
-impl<'a> VirtualMachine<'a> {
-    pub fn new(compiler: &'a mut Compiler<'a>) -> VirtualMachine {
-        VirtualMachine {
+impl VirtualMachine {
+    pub fn new(function: Function) -> VirtualMachine {
+        let stack = vec![Value::Function(function.clone())];
+
+        let call_frame = CallFrame {
+            function,
             pc: 0,
-            stack: vec![],
-            compiler,
+            slots_start: 0,
+        };
+        let frames = vec![call_frame];
+
+        VirtualMachine {
+            frames,
+            stack,
             globals: HashMap::new(),
         }
     }
 
-    pub fn new_with_globals(
-        compiler: &'a mut Compiler<'a>,
-        globals: HashMap<String, Value>,
-    ) -> VirtualMachine {
-        VirtualMachine {
+    pub fn new_with_globals(function: Function, globals: HashMap<String, Value>) -> VirtualMachine {
+        let stack = vec![Value::Function(function.clone())];
+
+        let call_frame = CallFrame {
+            function,
             pc: 0,
-            stack: vec![],
-            compiler,
-            globals, // Existing globals
+            slots_start: 0,
+        };
+        let frames = vec![call_frame];
+
+        VirtualMachine {
+            frames,
+            stack,
+            globals,
         }
     }
 
     pub fn interpret(&mut self) -> InterpretResult {
         loop {
             // Gets next OpCode using current PC
-            let pc = self.pc;
-            let chunk = self.compiler.current_chunk();
-            let Some(instruction) = chunk.get(pc) else {
-                return InterpretResult::Ok;
+            let Some(frame) = self.frames.last_mut() else {
+                return InterpretResult::RuntimeError;
+            };
+            let chunk = &mut frame.function.chunk;
+            let Some(instruction) = chunk.get(frame.pc) else {
+                self.frames.pop();
+                if self.frames.is_empty() {
+                    return InterpretResult::Ok;
+                }
+                continue;
             };
 
-            self.pc += 1; // Increases current PC for next instruction
+            frame.pc += 1; // Increases current PC for next instruction
             match instruction {
                 OpCode::Constant(index) => {
                     let Some(constant) = chunk.get_constant(*index).cloned() else {
@@ -114,16 +141,21 @@ impl<'a> VirtualMachine<'a> {
                         return InterpretResult::RuntimeError;
                     }
                 }
-                OpCode::Add => match (self.stack.pop(), self.stack.pop()) {
-                    (Some(Value::Number(first_value)), Some(Value::Number(second_value))) => {
-                        self.stack.push(Value::Number(first_value + second_value));
+                OpCode::Add => {
+                    for v in &self.stack {
+                        println!("{}", v);
                     }
-                    (Some(Value::String(first_value)), Some(Value::String(second_value))) => {
-                        self.stack
-                            .push(Value::String(format!("{}{}", second_value, first_value)));
+                    match (self.stack.pop(), self.stack.pop()) {
+                        (Some(Value::Number(first_value)), Some(Value::Number(second_value))) => {
+                            self.stack.push(Value::Number(first_value + second_value));
+                        }
+                        (Some(Value::String(first_value)), Some(Value::String(second_value))) => {
+                            self.stack
+                                .push(Value::String(format!("{}{}", second_value, first_value)));
+                        }
+                        _ => return InterpretResult::RuntimeError,
                     }
-                    _ => return InterpretResult::RuntimeError,
-                },
+                }
                 OpCode::Subtract => match (self.stack.pop(), self.stack.pop()) {
                     (Some(Value::Number(first_value)), Some(Value::Number(second_value))) => {
                         self.stack.push(Value::Number(second_value - first_value));
@@ -177,31 +209,75 @@ impl<'a> VirtualMachine<'a> {
                     };
                 }
                 OpCode::GetLocal(index) => {
-                    // -1 because first locals slot is for vm
-                    let Some(value) = self.stack.get(*index - 1) else {
+                    let Some(value) = self.stack.get(*index+frame.slots_start-1) else {
                         return InterpretResult::RuntimeError;
                     };
                     self.stack.push(value.clone());
                 }
                 OpCode::SetLocal(index) => {
-                    self.stack[*index] = self.stack[self.stack.len() - 1].clone();
+                    let Some(last) = self.stack.last() else {
+                        return InterpretResult::RuntimeError;
+                    };
+
+                    let last_value = last.clone();
+
+                    let Some(slot) = self.stack.get_mut(*index+frame.slots_start-1) else {
+                        return InterpretResult::RuntimeError;
+                    };
+
+                    *slot = last_value;
                 }
                 OpCode::JumpIfFalse(target) => {
-                    let last_index = self.stack.len() - 1;
+                    let Some(last) = self.stack.last() else {
+                        return InterpretResult::RuntimeError;
+                    };
 
-                    if is_falsey(&self.stack[last_index]) {
-                        self.pc += target;
+                    if is_falsey(last) {
+                        frame.pc += target;
                     }
                 }
                 OpCode::Jump(target) => {
-                    self.pc += target;
+                    frame.pc += target;
                 }
                 OpCode::Loop(target) => {
-                    self.pc -= *target;
+                    frame.pc -= target;
+                }
+                OpCode::Call(arguments_count) => {
+                    let Some(callee) = self.stack.get(self.stack.len() - 1 - arguments_count)
+                    else {
+                        return InterpretResult::RuntimeError;
+                    };
+
+                    let Value::Function(function) = callee else {
+                        return InterpretResult::RuntimeError;
+                    };
+
+                    if *arguments_count != function.arity {
+                        return InterpretResult::RuntimeError;
+                    }
+
+                    let new_frame = CallFrame {
+                        function: function.clone(),
+                        pc: 0,
+                        // Move the pointer to where function arguments start
+                        slots_start: self.stack.len() - arguments_count,
+                    };
+
+                    self.frames.push(new_frame);
                 }
                 OpCode::Return => {
-                    println!("{}", self.stack.pop().unwrap_or(Value::Null));
-                    return InterpretResult::Ok;
+                    let result = self.stack.pop().unwrap_or(Value::Null);
+                    let slots_start = frame.slots_start;
+
+                    self.frames.pop();
+
+                    if self.frames.is_empty() {
+                        return InterpretResult::Ok;
+                    }
+
+                    // Remove slots used for the frame
+                    self.stack.truncate(slots_start);
+                    self.stack.push(result);
                 }
             }
         }
@@ -217,8 +293,8 @@ fn is_falsey(value: &Value) -> bool {
 }
 
 pub fn compile_and_run(input: String) {
-    let mut lexer = Lexer::new(&input);
-    let mut compiler = Compiler::new(&mut lexer, FunctionType::Script);
+    let lexer = Lexer::new(&input);
+    let mut compiler = Compiler::new(Rc::new(RefCell::new(lexer)), FunctionType::Script);
 
     if matches!(compiler.compile(), InterpretResult::CompileError) {
         println!("compiler has {} errors", compiler.errors.len());
@@ -228,7 +304,7 @@ pub fn compile_and_run(input: String) {
         return;
     }
 
-    let mut vm = VirtualMachine::new(&mut compiler);
+    let mut vm = VirtualMachine::new(take(&mut compiler.function));
 
     vm.interpret();
 }
