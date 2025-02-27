@@ -6,7 +6,7 @@ use crate::{
     },
     vm::{
         compiler::Compiler,
-        object::FunctionType,
+        object::{Closure, FunctionType},
         vm_impl::{InterpretResult, VirtualMachine},
     },
 };
@@ -86,8 +86,12 @@ pub fn start_vm() {
             continue;
         }
 
-        let mut vm =
-            VirtualMachine::new_with_globals(take(&mut compiler.function), globals.clone());
+        let closure = Closure {
+            function: take(&mut compiler.function),
+            upvalues: vec![],
+        };
+
+        let mut vm = VirtualMachine::new_with_globals(closure, globals.clone());
 
         // Run the input
         if vm.interpret() == InterpretResult::Ok {

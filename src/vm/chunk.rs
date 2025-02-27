@@ -1,10 +1,11 @@
 use std::fmt;
 
-use super::object::Function;
+use super::object::{Closure, Function};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum OpCode {
     Constant(usize),
+    Closure(usize),
     Null,
     True,
     False,
@@ -28,6 +29,8 @@ pub enum OpCode {
     SetGlobal(usize),
     GetLocal(usize),
     SetLocal(usize),
+    SetUpvalue(usize),
+    GetUpvalue(usize),
     JumpIfFalse(usize),
     Jump(usize),
     Loop(usize),
@@ -39,6 +42,8 @@ pub enum Value {
     Boolean(bool),
     String(String),
     Function(Function),
+    Closure(Closure),
+    Upvalue(usize),
     Null,
 }
 
@@ -49,6 +54,8 @@ impl fmt::Display for Value {
             Value::Boolean(b) => write!(f, "{}", b),
             Value::String(s) => write!(f, "{}", s),
             Value::Function(_) => write!(f, "function"),
+            Value::Closure(_) => write!(f, "closure"),
+            Value::Upvalue(u) => write!(f, "{}", u),
             Value::Null => write!(f, "null"),
         }
     }

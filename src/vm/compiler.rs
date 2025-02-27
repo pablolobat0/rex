@@ -1,4 +1,4 @@
-use std::{cell::RefCell, collections::HashMap, rc::Rc};
+use std::{cell::RefCell, collections::HashMap, rc::Rc, usize};
 
 use crate::common::{
     lexer::{
@@ -10,7 +10,7 @@ use crate::common::{
 
 use super::{
     chunk::{Chunk, OpCode, Value},
-    object::{Function, FunctionType},
+    object::{Function, FunctionType, Upvalue},
     vm_impl::InterpretResult,
 };
 use crate::vm::scope::Scope;
@@ -19,8 +19,9 @@ use crate::vm::scope::Scope;
 type PrefixParseFn = fn(&mut Compiler);
 type InfixParseFn = fn(&mut Compiler);
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Compiler<'a> {
+    enclosing: Option<Rc<RefCell<Compiler<'a>>>>,
     lexer: Rc<RefCell<Lexer<'a>>>,
     current_token: Option<Token>,
     peek_token: Option<Token>,
@@ -36,6 +37,42 @@ pub struct Compiler<'a> {
 impl<'a> Compiler<'a> {
     pub fn new(lexer: Rc<RefCell<Lexer<'a>>>, function_type: FunctionType) -> Compiler<'a> {
         let mut compiler = Compiler {
+            enclosing: None,
+            lexer,
+            current_token: None,
+            peek_token: None,
+            errors: vec![],
+            prefix_parse_fns: HashMap::new(),
+            infix_parse_fns: HashMap::new(),
+            precedences: create_precedences(),
+            current_scope: Scope::new(),
+            function_type,
+            function: Function::new(),
+        };
+
+        if let FunctionType::Function(name) = &compiler.function_type {
+            compiler.function.name.clone_from(name);
+        }
+
+        // Reserve first local for vm use
+        compiler.current_scope.add_local(Token {
+            kind: TokenType::Default,
+            lexeme: String::new(),
+            line: 0,
+        });
+
+        compiler.register_prefix_functions();
+        compiler.register_infix_functions();
+
+        compiler
+    }
+    pub fn new_new(
+        enclosing: Option<Rc<RefCell<Compiler<'a>>>>,
+        lexer: Rc<RefCell<Lexer<'a>>>,
+        function_type: FunctionType,
+    ) -> Compiler<'a> {
+        let mut compiler = Compiler {
+            enclosing,
             lexer,
             current_token: None,
             peek_token: None,
@@ -303,7 +340,12 @@ impl<'a> Compiler<'a> {
 
         // New compiler for the function
         let lexeme = self.current_token_lexeme();
-        let mut compiler = Compiler::new(self.lexer.clone(), FunctionType::Function(lexeme));
+        let enclosing = Some(Rc::new(RefCell::new(self.clone())));
+        let mut compiler = Compiler::new_new(
+            enclosing,
+            self.lexer.clone(),
+            FunctionType::Function(lexeme),
+        );
         // Initialize current and peek token
         compiler.current_token = self.current_token.take();
         compiler.peek_token = self.peek_token.take();
@@ -320,8 +362,18 @@ impl<'a> Compiler<'a> {
 
         let execute_function_index = self
             .current_chunk()
-            .add_constant(Value::Function(compiler.function));
-        self.emit_bytecode(OpCode::Constant(execute_function_index));
+            .add_constant(Value::Function(compiler.function.clone()));
+        self.emit_bytecode(OpCode::Closure(execute_function_index));
+
+        for upvalue in compiler.function.upvalues {
+            if upvalue.is_local {
+                self.emit_bytecode(OpCode::True);
+            } else {
+                self.emit_bytecode(OpCode::False);
+            }
+
+            self.emit_bytecode(OpCode::Constant(upvalue.index));
+        }
 
         // Initialize current and peek token
         self.current_token = compiler.current_token.take();
@@ -551,6 +603,42 @@ impl<'a> Compiler<'a> {
         }
     }
 
+    fn resolve_upvalue(&mut self, token: &Token) -> Option<usize> {
+        // Search the upvalue in the enclosing
+        let local = self
+            .enclosing
+            .as_ref()
+            .and_then(|enclosing| enclosing.borrow().current_scope.resolve_local(token));
+
+        if let Some(index) = local {
+            return Some(self.add_upvalue(index, true));
+        }
+
+        // If it is not in the enclosing we have to search it in a recursive way
+        let no_local = self
+            .enclosing
+            .as_ref()
+            .and_then(|enclosing| enclosing.borrow_mut().resolve_upvalue(token));
+
+        if let Some(index) = no_local {
+            return Some(self.add_upvalue(index, false));
+        }
+
+        None
+    }
+
+    fn add_upvalue(&mut self, index: usize, is_local: bool) -> usize {
+        // Before pushing check if it has already been pushed
+        for (i, upvalue) in self.function.upvalues.iter().enumerate() {
+            if upvalue.index == index && upvalue.is_local == is_local {
+                return i;
+            }
+        }
+        self.function.upvalues.push(Upvalue { index, is_local });
+
+        return self.function.upvalues.len() - 1;
+    }
+
     // Debug functions
 
     pub fn compile_one_statement(&mut self) -> bool {
@@ -584,6 +672,9 @@ fn identifier(compiler: &mut Compiler) {
     if let Some(position) = compiler.current_scope.resolve_local(&token) {
         get_op = OpCode::GetLocal(position);
         set_op = OpCode::SetLocal(position);
+    } else if let Some(position) = compiler.resolve_upvalue(&token) {
+        get_op = OpCode::GetUpvalue(position);
+        set_op = OpCode::SetUpvalue(position);
     } else {
         let index = compiler
             .current_chunk()

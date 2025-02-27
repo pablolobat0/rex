@@ -1,12 +1,12 @@
 use crate::common::lexer::token::Token;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Local {
     pub name: Token,
     pub depth: i32,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Scope {
     pub locals: Vec<Local>,
     pub depth: i32,

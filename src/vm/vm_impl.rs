@@ -4,6 +4,7 @@ use std::{collections::HashMap, rc::Rc};
 
 use crate::common::lexer::lexer_impl::Lexer;
 
+use super::object::Closure;
 use super::{
     chunk::{value_equal, OpCode, Value},
     compiler::Compiler,
@@ -12,9 +13,15 @@ use super::{
 
 #[derive(Debug)]
 struct CallFrame {
-    function: Function,
+    closure: Closure,
     pc: usize,
     slots_start: usize,
+}
+
+impl CallFrame {
+    fn function(&self) -> &Function {
+        &self.closure.function
+    }
 }
 
 #[derive(Debug)]
@@ -32,11 +39,11 @@ pub enum InterpretResult {
 }
 
 impl VirtualMachine {
-    pub fn new(function: Function) -> VirtualMachine {
-        let stack = vec![Value::Function(function.clone())];
+    pub fn new(closure: Closure) -> VirtualMachine {
+        let stack = vec![Value::Closure(closure.clone())];
 
         let call_frame = CallFrame {
-            function,
+            closure,
             pc: 0,
             slots_start: 0,
         };
@@ -49,11 +56,11 @@ impl VirtualMachine {
         }
     }
 
-    pub fn new_with_globals(function: Function, globals: HashMap<String, Value>) -> VirtualMachine {
-        let stack = vec![Value::Function(function.clone())];
+    pub fn new_with_globals(closure: Closure, globals: HashMap<String, Value>) -> VirtualMachine {
+        let stack = vec![Value::Closure(closure.clone())];
 
         let call_frame = CallFrame {
-            function,
+            closure,
             pc: 0,
             slots_start: 0,
         };
@@ -72,7 +79,7 @@ impl VirtualMachine {
             let Some(frame) = self.frames.last_mut() else {
                 return InterpretResult::RuntimeError;
             };
-            let chunk = &mut frame.function.chunk;
+            let chunk = &mut frame.closure.function.chunk;
             let Some(instruction) = chunk.get(frame.pc) else {
                 self.frames.pop();
                 if self.frames.is_empty() {
@@ -209,7 +216,7 @@ impl VirtualMachine {
                     };
                 }
                 OpCode::GetLocal(index) => {
-                    let Some(value) = self.stack.get(*index+frame.slots_start-1) else {
+                    let Some(value) = self.stack.get(*index + frame.slots_start - 1) else {
                         return InterpretResult::RuntimeError;
                     };
                     self.stack.push(value.clone());
@@ -221,7 +228,7 @@ impl VirtualMachine {
 
                     let last_value = last.clone();
 
-                    let Some(slot) = self.stack.get_mut(*index+frame.slots_start-1) else {
+                    let Some(slot) = self.stack.get_mut(*index + frame.slots_start - 1) else {
                         return InterpretResult::RuntimeError;
                     };
 
@@ -242,22 +249,83 @@ impl VirtualMachine {
                 OpCode::Loop(target) => {
                     frame.pc -= target;
                 }
+                OpCode::GetUpvalue(index) => {
+                    let Some(upvalue) = frame.closure.upvalues.get(*index) else {
+                        return InterpretResult::RuntimeError;
+                    };
+                    self.stack.push(upvalue.clone());
+                }
+                OpCode::SetUpvalue(index) => {
+                    let Some(last) = self.stack.last() else {
+                        return InterpretResult::RuntimeError;
+                    };
+
+                    let last_value = last.clone();
+
+                    let Some(slot) = frame.closure.upvalues.get_mut(*index) else {
+                        return InterpretResult::RuntimeError;
+                    };
+
+                    *slot = last_value;
+                }
+                OpCode::Closure(index) => {
+                    let Some(constant) = chunk.get_constant(*index).cloned() else {
+                        return InterpretResult::RuntimeError;
+                    };
+
+                    let Value::Function(function) = constant else {
+                        return InterpretResult::RuntimeError;
+                    };
+
+                    let mut closure = Closure {
+                        function,
+                        upvalues: vec![],
+                    };
+
+                    for (_, _) in closure.function.upvalues.iter().enumerate() {
+                        frame.pc += 1;
+                        let is_local = chunk.get(frame.pc);
+                        frame.pc += 1;
+                        let index = chunk.get(frame.pc);
+
+                        let Some(OpCode::Constant(index)) = index else {
+                            return InterpretResult::RuntimeError;
+                        };
+
+                        if let Some(OpCode::True) = is_local {
+                            let Some(upvalue_index) = self.stack.get(index + frame.slots_start)
+                            else {
+                                return InterpretResult::RuntimeError;
+                            };
+                            closure.upvalues.push(upvalue_index.clone());
+                        } else if let Some(OpCode::False) = is_local {
+                            let Some(i) = frame.closure.upvalues.get(*index) else {
+                                return InterpretResult::RuntimeError;
+                            };
+                            closure.upvalues.push(i.clone());
+                        } else {
+                            return InterpretResult::RuntimeError;
+                        }
+                    }
+
+                    self.stack.push(Value::Closure(closure));
+                }
                 OpCode::Call(arguments_count) => {
                     let Some(callee) = self.stack.get(self.stack.len() - 1 - arguments_count)
                     else {
                         return InterpretResult::RuntimeError;
                     };
 
-                    let Value::Function(function) = callee else {
+                    let Value::Closure(closure) = callee else {
                         return InterpretResult::RuntimeError;
                     };
 
-                    if *arguments_count != function.arity {
+                    if *arguments_count != closure.function.arity {
                         return InterpretResult::RuntimeError;
                     }
 
                     let new_frame = CallFrame {
-                        function: function.clone(),
+                        closure: closure.clone(),
                         pc: 0,
                         // Move the pointer to where function arguments start
                         slots_start: self.stack.len() - arguments_count,
@@ -304,7 +372,12 @@ pub fn compile_and_run(input: String) {
         return;
     }
 
-    let mut vm = VirtualMachine::new(take(&mut compiler.function));
+    let closure = Closure {
+        function: take(&mut compiler.function),
+        upvalues: vec![],
+    };
+
+    let mut vm = VirtualMachine::new(closure);
 
     vm.interpret();
 }

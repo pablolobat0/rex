@@ -7,7 +7,7 @@ mod test {
         vm::{
             chunk::{OpCode, Value},
             compiler::Compiler,
-            object::FunctionType,
+            object::{Closure, FunctionType},
             vm_impl::{InterpretResult, VirtualMachine},
         },
     };
@@ -32,7 +32,12 @@ mod test {
 
         check_compiler_errors(&compiler);
 
-        let mut vm = VirtualMachine::new(take(&mut compiler.function));
+        let closure = Closure {
+            function: take(&mut compiler.function),
+            upvalues: vec![],
+        };
+
+        let mut vm = VirtualMachine::new(closure);
 
         assert_eq!(
             vm.interpret(),
@@ -51,7 +56,12 @@ mod test {
 
         check_compiler_errors(&compiler);
 
-        let mut vm = VirtualMachine::new(take(&mut compiler.function));
+        let closure = Closure {
+            function: take(&mut compiler.function),
+            upvalues: vec![],
+        };
+
+        let mut vm = VirtualMachine::new(closure);
 
         assert_eq!(
             vm.interpret(),
@@ -70,7 +80,12 @@ mod test {
 
         check_compiler_errors(&compiler);
 
-        let mut vm = VirtualMachine::new(take(&mut compiler.function));
+        let closure = Closure {
+            function: take(&mut compiler.function),
+            upvalues: vec![],
+        };
+
+        let mut vm = VirtualMachine::new(closure);
 
         assert_eq!(
             vm.interpret(),
@@ -106,7 +121,12 @@ mod test {
             "Compiler should compile without errors"
         );
 
-        let mut vm = VirtualMachine::new(take(&mut compiler.function));
+        let closure = Closure {
+            function: take(&mut compiler.function),
+            upvalues: vec![],
+        };
+
+        let mut vm = VirtualMachine::new(closure);
 
         assert_eq!(
             vm.interpret(),
@@ -153,7 +173,12 @@ mod test {
             "Compiler should compile without errors"
         );
 
-        let mut vm = VirtualMachine::new(take(&mut compiler.function));
+        let closure = Closure {
+            function: take(&mut compiler.function),
+            upvalues: vec![],
+        };
+
+        let mut vm = VirtualMachine::new(closure);
         assert_eq!(
             vm.interpret(),
             InterpretResult::RuntimeError,
@@ -226,7 +251,12 @@ mod test {
 
         check_compiler_errors(&compiler);
 
-        let mut vm = VirtualMachine::new(take(&mut compiler.function));
+        let closure = Closure {
+            function: take(&mut compiler.function),
+            upvalues: vec![],
+        };
+
+        let mut vm = VirtualMachine::new(closure);
 
         assert_eq!(
             vm.interpret(),
@@ -248,7 +278,12 @@ mod test {
 
         check_compiler_errors(&compiler);
 
-        let mut vm = VirtualMachine::new(take(&mut compiler.function));
+        let closure = Closure {
+            function: take(&mut compiler.function),
+            upvalues: vec![],
+        };
+
+        let mut vm = VirtualMachine::new(closure);
 
         assert_eq!(
             vm.interpret(),
@@ -270,7 +305,12 @@ mod test {
 
         check_compiler_errors(&compiler);
 
-        let mut vm = VirtualMachine::new(take(&mut compiler.function));
+        let closure = Closure {
+            function: take(&mut compiler.function),
+            upvalues: vec![],
+        };
+
+        let mut vm = VirtualMachine::new(closure);
 
         assert_eq!(
             vm.interpret(),
@@ -303,7 +343,12 @@ mod test {
             Some(&Value::Number(14.0))
         );
 
-        let mut vm = VirtualMachine::new(take(&mut compiler.function));
+        let closure = Closure {
+            function: take(&mut compiler.function),
+            upvalues: vec![],
+        };
+
+        let mut vm = VirtualMachine::new(closure);
 
         assert_eq!(
             vm.interpret(),
@@ -343,7 +388,12 @@ mod test {
 
         check_compiler_errors(&compiler);
 
-        let mut vm = VirtualMachine::new(take(&mut compiler.function));
+        let closure = Closure {
+            function: take(&mut compiler.function),
+            upvalues: vec![],
+        };
+
+        let mut vm = VirtualMachine::new(closure);
 
         assert_eq!(
             vm.interpret(),
@@ -381,7 +431,12 @@ mod test {
             ]
         );
 
-        let mut vm = VirtualMachine::new(take(&mut compiler.function));
+        let closure = Closure {
+            function: take(&mut compiler.function),
+            upvalues: vec![],
+        };
+
+        let mut vm = VirtualMachine::new(closure);
 
         assert_eq!(
             vm.interpret(),
@@ -443,7 +498,12 @@ mod test {
 
             check_compiler_errors(&compiler);
 
-            let mut vm = VirtualMachine::new(take(&mut compiler.function));
+            let closure = Closure {
+                function: take(&mut compiler.function),
+                upvalues: vec![],
+            };
+
+            let mut vm = VirtualMachine::new(closure);
 
             assert_eq!(
                 vm.interpret(),
@@ -471,7 +531,12 @@ mod test {
 
         check_compiler_errors(&compiler);
 
-        let mut vm = VirtualMachine::new(take(&mut compiler.function));
+        let closure = Closure {
+            function: take(&mut compiler.function),
+            upvalues: vec![],
+        };
+
+        let mut vm = VirtualMachine::new(closure);
 
         assert_eq!(
             vm.interpret(),
@@ -493,7 +558,12 @@ mod test {
 
         check_compiler_errors(&compiler);
 
-        let mut vm = VirtualMachine::new(take(&mut compiler.function));
+        let closure = Closure {
+            function: take(&mut compiler.function),
+            upvalues: vec![],
+        };
+
+        let mut vm = VirtualMachine::new(closure);
 
         assert_eq!(
             vm.interpret(),
@@ -516,7 +586,12 @@ mod test {
 
         check_compiler_errors(&compiler);
 
-        let mut vm = VirtualMachine::new(take(&mut compiler.function));
+        let closure = Closure {
+            function: take(&mut compiler.function),
+            upvalues: vec![],
+        };
+
+        let mut vm = VirtualMachine::new(closure);
 
         assert_eq!(
             vm.interpret(),
@@ -541,7 +616,12 @@ mod test {
 
         check_compiler_errors(&compiler);
 
-        let mut vm = VirtualMachine::new(take(&mut compiler.function));
+        let closure = Closure {
+            function: take(&mut compiler.function),
+            upvalues: vec![],
+        };
+
+        let mut vm = VirtualMachine::new(closure);
 
         assert_eq!(
             vm.interpret(),
