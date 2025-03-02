@@ -631,4 +631,146 @@ mod test {
 
         assert_eq!(vm.globals.get("result"), Some(&Value::Number(3.0)));
     }
+
+    #[test]
+    fn basic_closure() {
+        let input = "
+        let x = 10
+        fn getX() {
+            return x
+        }
+        let result = getX()
+    ";
+
+        let lexer = Lexer::new(input);
+        let mut compiler = Compiler::new(Rc::new(RefCell::new(lexer)), FunctionType::Script);
+
+        compiler.compile();
+
+        check_compiler_errors(&compiler);
+
+        let closure = Closure {
+            function: take(&mut compiler.function),
+            upvalues: vec![],
+        };
+
+        let mut vm = VirtualMachine::new(closure);
+
+        assert_eq!(
+            vm.interpret(),
+            InterpretResult::Ok,
+            "VM should run without errors"
+        );
+
+        assert_eq!(vm.globals.get("result"), Some(&Value::Number(10.0)));
+    }
+
+    #[test]
+    fn nested_closure() {
+        let input = "
+        let x = 10
+        fn outer() {
+            let y = 20
+            fn inner() {
+                return x + y
+            }
+            return inner()
+        }
+        let result = outer()
+    ";
+
+        let lexer = Lexer::new(input);
+        let mut compiler = Compiler::new(Rc::new(RefCell::new(lexer)), FunctionType::Script);
+
+        compiler.compile();
+
+        check_compiler_errors(&compiler);
+
+        let closure = Closure {
+            function: take(&mut compiler.function),
+            upvalues: vec![],
+        };
+
+        let mut vm = VirtualMachine::new(closure);
+
+        assert_eq!(
+            vm.interpret(),
+            InterpretResult::Ok,
+            "VM should run without errors"
+        );
+
+        assert_eq!(vm.globals.get("result"), Some(&Value::Number(30.0)));
+    }
+
+    #[test]
+    fn closure_modifies_captured_variable() {
+        let input = "
+        let x = 10
+        fn incrementX() {
+            x = x + 1
+        }
+        incrementX()
+        let result = x
+    ";
+
+        let lexer = Lexer::new(input);
+        let mut compiler = Compiler::new(Rc::new(RefCell::new(lexer)), FunctionType::Script);
+
+        compiler.compile();
+
+        check_compiler_errors(&compiler);
+
+        let closure = Closure {
+            function: take(&mut compiler.function),
+            upvalues: vec![],
+        };
+
+        let mut vm = VirtualMachine::new(closure);
+
+        assert_eq!(
+            vm.interpret(),
+            InterpretResult::Ok,
+            "VM should run without errors"
+        );
+
+        assert_eq!(vm.globals.get("result"), Some(&Value::Number(11.0)));
+    }
+
+    #[test]
+    fn closure_returns_another_closure() {
+        let input = "
+        let x = 10
+        fn outer() {
+            let y = 20
+            fn inner() {
+                return x + y
+            }
+            return inner
+        }
+        let closure = outer()
+        let result = closure()
+    ";
+
+        let lexer = Lexer::new(input);
+        let mut compiler = Compiler::new(Rc::new(RefCell::new(lexer)), FunctionType::Script);
+
+        compiler.compile();
+
+        check_compiler_errors(&compiler);
+
+        let closure = Closure {
+            function: take(&mut compiler.function),
+            upvalues: vec![],
+        };
+
+        let mut vm = VirtualMachine::new(closure);
+
+        assert_eq!(
+            vm.interpret(),
+            InterpretResult::Ok,
+            "VM should run without errors"
+        );
+
+        assert_eq!(vm.globals.get("result"), Some(&Value::Number(30.0)));
+    }
 }
