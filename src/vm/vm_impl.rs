@@ -282,7 +282,10 @@ impl VirtualMachine {
                         upvalues: vec![],
                     };
 
-                    for (_, _) in closure.function.upvalues.iter().enumerate() {
+                    for (i, _) in closure.function.upvalues.iter().enumerate() {
+                        if i == 0 {
+                            frame.pc -= 1;
+                        }
                         frame.pc += 1;
                         let is_local = chunk.get(frame.pc);
                         frame.pc += 1;
@@ -293,7 +296,7 @@ impl VirtualMachine {
                         };
 
                         if let Some(OpCode::True) = is_local {
-                            let Some(upvalue_index) = self.stack.get(index + frame.slots_start)
+                            let Some(upvalue_index) = self.stack.get(index + frame.slots_start - 1)
                             else {
                                 return InterpretResult::RuntimeError;
                             };
