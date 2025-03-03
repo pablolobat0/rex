@@ -33,7 +33,7 @@ pub enum InterpretResult {
 }
 
 impl VirtualMachine {
-    pub fn new(closure: Closure) -> VirtualMachine {
+    pub fn new(closure: Closure, globals: Option<HashMap<String, Value>>) -> VirtualMachine {
         let stack = vec![Value::Closure(closure.clone())];
 
         let call_frame = CallFrame {
@@ -41,29 +41,21 @@ impl VirtualMachine {
             pc: 0,
             slots_start: 0,
         };
+
         let frames = vec![call_frame];
 
-        VirtualMachine {
-            frames,
-            stack,
-            globals: HashMap::new(),
-        }
-    }
-
-    pub fn new_with_globals(closure: Closure, globals: HashMap<String, Value>) -> VirtualMachine {
-        let stack = vec![Value::Closure(closure.clone())];
-
-        let call_frame = CallFrame {
-            closure,
-            pc: 0,
-            slots_start: 0,
-        };
-        let frames = vec![call_frame];
-
-        VirtualMachine {
-            frames,
-            stack,
-            globals,
+        if let Some(globals) = globals {
+            VirtualMachine {
+                frames,
+                stack,
+                globals,
+            }
+        } else {
+            VirtualMachine {
+                frames,
+                stack,
+                globals: HashMap::new(),
+            }
         }
     }
 
@@ -361,7 +353,7 @@ pub fn compile_and_run(input: String) {
         upvalues: vec![],
     };
 
-    let mut vm = VirtualMachine::new(closure);
+    let mut vm = VirtualMachine::new(closure, None);
 
     vm.interpret();
 }

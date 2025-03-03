@@ -37,7 +37,7 @@ mod test {
             upvalues: vec![],
         };
 
-        let mut vm = VirtualMachine::new(closure);
+        let mut vm = VirtualMachine::new(closure, None);
 
         assert_eq!(
             vm.interpret(),
@@ -61,7 +61,7 @@ mod test {
             upvalues: vec![],
         };
 
-        let mut vm = VirtualMachine::new(closure);
+        let mut vm = VirtualMachine::new(closure, None);
 
         assert_eq!(
             vm.interpret(),
@@ -85,7 +85,7 @@ mod test {
             upvalues: vec![],
         };
 
-        let mut vm = VirtualMachine::new(closure);
+        let mut vm = VirtualMachine::new(closure, None);
 
         assert_eq!(
             vm.interpret(),
@@ -126,7 +126,7 @@ mod test {
             upvalues: vec![],
         };
 
-        let mut vm = VirtualMachine::new(closure);
+        let mut vm = VirtualMachine::new(closure, None);
 
         assert_eq!(
             vm.interpret(),
@@ -178,7 +178,7 @@ mod test {
             upvalues: vec![],
         };
 
-        let mut vm = VirtualMachine::new(closure);
+        let mut vm = VirtualMachine::new(closure, None);
         assert_eq!(
             vm.interpret(),
             InterpretResult::RuntimeError,
@@ -256,7 +256,7 @@ mod test {
             upvalues: vec![],
         };
 
-        let mut vm = VirtualMachine::new(closure);
+        let mut vm = VirtualMachine::new(closure, None);
 
         assert_eq!(
             vm.interpret(),
@@ -283,7 +283,7 @@ mod test {
             upvalues: vec![],
         };
 
-        let mut vm = VirtualMachine::new(closure);
+        let mut vm = VirtualMachine::new(closure, None);
 
         assert_eq!(
             vm.interpret(),
@@ -310,7 +310,7 @@ mod test {
             upvalues: vec![],
         };
 
-        let mut vm = VirtualMachine::new(closure);
+        let mut vm = VirtualMachine::new(closure, None);
 
         assert_eq!(
             vm.interpret(),
@@ -348,7 +348,7 @@ mod test {
             upvalues: vec![],
         };
 
-        let mut vm = VirtualMachine::new(closure);
+        let mut vm = VirtualMachine::new(closure, None);
 
         assert_eq!(
             vm.interpret(),
@@ -393,7 +393,7 @@ mod test {
             upvalues: vec![],
         };
 
-        let mut vm = VirtualMachine::new(closure);
+        let mut vm = VirtualMachine::new(closure, None);
 
         assert_eq!(
             vm.interpret(),
@@ -436,7 +436,7 @@ mod test {
             upvalues: vec![],
         };
 
-        let mut vm = VirtualMachine::new(closure);
+        let mut vm = VirtualMachine::new(closure, None);
 
         assert_eq!(
             vm.interpret(),
@@ -503,7 +503,7 @@ mod test {
                 upvalues: vec![],
             };
 
-            let mut vm = VirtualMachine::new(closure);
+            let mut vm = VirtualMachine::new(closure, None);
 
             assert_eq!(
                 vm.interpret(),
@@ -536,7 +536,7 @@ mod test {
             upvalues: vec![],
         };
 
-        let mut vm = VirtualMachine::new(closure);
+        let mut vm = VirtualMachine::new(closure, None);
 
         assert_eq!(
             vm.interpret(),
@@ -563,7 +563,7 @@ mod test {
             upvalues: vec![],
         };
 
-        let mut vm = VirtualMachine::new(closure);
+        let mut vm = VirtualMachine::new(closure, None);
 
         assert_eq!(
             vm.interpret(),
@@ -591,7 +591,7 @@ mod test {
             upvalues: vec![],
         };
 
-        let mut vm = VirtualMachine::new(closure);
+        let mut vm = VirtualMachine::new(closure, None);
 
         assert_eq!(
             vm.interpret(),
@@ -621,7 +621,7 @@ mod test {
             upvalues: vec![],
         };
 
-        let mut vm = VirtualMachine::new(closure);
+        let mut vm = VirtualMachine::new(closure, None);
 
         assert_eq!(
             vm.interpret(),
@@ -654,7 +654,7 @@ mod test {
             upvalues: vec![],
         };
 
-        let mut vm = VirtualMachine::new(closure);
+        let mut vm = VirtualMachine::new(closure, None);
 
         assert_eq!(
             vm.interpret(),
@@ -691,7 +691,7 @@ mod test {
             upvalues: vec![],
         };
 
-        let mut vm = VirtualMachine::new(closure);
+        let mut vm = VirtualMachine::new(closure, None);
 
         assert_eq!(
             vm.interpret(),
@@ -725,7 +725,7 @@ mod test {
             upvalues: vec![],
         };
 
-        let mut vm = VirtualMachine::new(closure);
+        let mut vm = VirtualMachine::new(closure, None);
 
         assert_eq!(
             vm.interpret(),
@@ -763,7 +763,7 @@ mod test {
             upvalues: vec![],
         };
 
-        let mut vm = VirtualMachine::new(closure);
+        let mut vm = VirtualMachine::new(closure, None);
 
         assert_eq!(
             vm.interpret(),

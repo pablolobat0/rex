@@ -91,7 +91,7 @@ pub fn start_vm() {
             upvalues: vec![],
         };
 
-        let mut vm = VirtualMachine::new_with_globals(closure, globals.clone());
+        let mut vm = VirtualMachine::new(closure, Some(globals.clone()));
 
         // Run the input
         if vm.interpret() == InterpretResult::Ok {

@@ -1,4 +1,4 @@
-use std::{cell::RefCell, collections::HashMap, rc::Rc, usize};
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use crate::common::{
     lexer::{
@@ -630,7 +630,7 @@ impl<'a> Compiler<'a> {
         }
         self.function.upvalues.push(Upvalue { index, is_local });
 
-        return self.function.upvalues.len() - 1;
+        self.function.upvalues.len() - 1
     }
 
     // Debug functions
