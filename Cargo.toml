@@ -1,6 +1,6 @@
 [package]
-name = "interpreter"
-version = "0.1.0"
+name = "rex"
+version = "1.0.0"
 edition = "2021"
 [dependencies]
 clap = { version = "4.0", features = ["derive", "cargo"] }
