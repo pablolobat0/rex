@@ -44,7 +44,7 @@ pub enum TokenType {
     While,
     Null,
     // End of file
-    EOF,
+    Eof,
     Illegal,
     Error,
     Default,
@@ -58,7 +58,7 @@ impl fmt::Display for TokenType {
             TokenType::LeftBrace => "{",
             TokenType::RightBrace => "}",
             TokenType::Illegal => "Illegal",
-            TokenType::EOF => "EOF",
+            TokenType::Eof => "EOF",
             TokenType::Identifier => "Identifier",
             TokenType::String => "String",
             TokenType::Integer => "Integer",

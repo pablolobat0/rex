@@ -229,7 +229,7 @@ impl<'a> Compiler<'a> {
         self.next_token();
         self.next_token();
 
-        while !self.current_token_is(TokenType::EOF) {
+        while !self.current_token_is(TokenType::Eof) {
             self.statement();
             self.next_token();
         }
@@ -438,7 +438,7 @@ impl<'a> Compiler<'a> {
 
         // Parse all the statements in current block
         while !self.current_token_is(TokenType::RightBrace)
-            && !self.current_token_is(TokenType::EOF)
+            && !self.current_token_is(TokenType::Eof)
         {
             self.statement();
             self.next_token();
@@ -531,7 +531,7 @@ impl<'a> Compiler<'a> {
     }
 
     fn parse_end_statement(&mut self) {
-        if !self.peek_token_is(TokenType::NewLine) && !self.peek_token_is(TokenType::EOF) {
+        if !self.peek_token_is(TokenType::NewLine) && !self.peek_token_is(TokenType::Eof) {
             self.peek_error(TokenType::NewLine);
         } else {
             self.next_token();

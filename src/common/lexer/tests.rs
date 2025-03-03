@@ -94,5 +94,5 @@ fn test_lexer(input: &str, expected_tokens: Vec<Token>) {
         assert_eq!(token, expected_token);
     }
 
-    assert_eq!(lexer.next_token().kind, TokenType::EOF);
+    assert_eq!(lexer.next_token().kind, TokenType::Eof);
 }

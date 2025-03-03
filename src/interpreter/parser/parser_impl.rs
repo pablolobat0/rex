@@ -207,7 +207,7 @@ impl<'a> Parser<'a> {
         let mut program = Program::new();
 
         // The parsing continues until the end of the file
-        while !self.current_token_is(TokenType::EOF) {
+        while !self.current_token_is(TokenType::Eof) {
             if let Some(statement) = self.parse_statement() {
                 program.add_statement(statement);
             }
@@ -232,7 +232,7 @@ impl<'a> Parser<'a> {
             _ => self.parse_expression_statement().map(Statement::Expression),
         };
 
-        if self.peek_token_is(TokenType::EOF) {
+        if self.peek_token_is(TokenType::Eof) {
             return statement;
         } else if !self.expect_peek(TokenType::NewLine) {
             return None;
@@ -332,7 +332,7 @@ impl<'a> Parser<'a> {
         self.next_token();
 
         while !self.current_token_is(TokenType::RightBrace)
-            && !self.current_token_is(TokenType::EOF)
+            && !self.current_token_is(TokenType::Eof)
         {
             if let Some(statement) = self.parse_statement() {
                 block_statement.add_statement(statement);

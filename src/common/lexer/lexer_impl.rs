@@ -193,7 +193,7 @@ impl<'a> Lexer<'a> {
                     Token::new(TokenType::Illegal, c.to_string(), self.line)
                 }
             }
-            None => Token::new(TokenType::EOF, "".to_string(), self.line),
+            None => Token::new(TokenType::Eof, "".to_string(), self.line),
         }
     }
 

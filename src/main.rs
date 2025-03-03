@@ -15,7 +15,7 @@ mod vm;
 #[derive(Debug)]
 enum InterpreterType {
     VM,
-    AST,
+    Ast,
 }
 
 fn main() {
@@ -31,7 +31,7 @@ fn main() {
 
     // Determine which interpreter to use
     let interpreter_type = if matches.get_flag("ast") {
-        InterpreterType::AST
+        InterpreterType::Ast
     } else {
         InterpreterType::VM
     };
@@ -42,12 +42,12 @@ fn main() {
         let code = fs::read_to_string(file).expect("Failed to read the file");
         match interpreter_type {
             InterpreterType::VM => compile_and_run(code),
-            InterpreterType::AST => interpret_ast(code),
+            InterpreterType::Ast => interpret_ast(code),
         };
     } else {
         match interpreter_type {
             InterpreterType::VM => start_vm(),
-            InterpreterType::AST => start_ast(),
+            InterpreterType::Ast => start_ast(),
         }
     }
 }
