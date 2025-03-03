@@ -366,13 +366,7 @@ impl<'a> Compiler<'a> {
         self.emit_bytecode(OpCode::Closure(execute_function_index));
 
         for upvalue in compiler.function.upvalues {
-            if upvalue.is_local {
-                self.emit_bytecode(OpCode::True);
-            } else {
-                self.emit_bytecode(OpCode::False);
-            }
-
-            self.emit_bytecode(OpCode::Constant(upvalue.index));
+            self.emit_bytecode(OpCode::Upvalue(upvalue.index, upvalue.is_local));
         }
 
         // Initialize current and peek token

@@ -23,6 +23,7 @@ pub enum OpCode {
     Divide,
     Return,
     Pop,
+    Upvalue(usize, bool),
     Call(usize),
     DefineGlobal(usize),
     GetGlobal(usize),
@@ -43,7 +44,6 @@ pub enum Value {
     String(String),
     Function(Function),
     Closure(Closure),
-    Upvalue(usize),
     Null,
 }
 
@@ -55,7 +55,6 @@ impl fmt::Display for Value {
             Value::String(s) => write!(f, "{}", s),
             Value::Function(_) => write!(f, "function"),
             Value::Closure(_) => write!(f, "closure"),
-            Value::Upvalue(u) => write!(f, "{}", u),
             Value::Null => write!(f, "null"),
         }
     }
